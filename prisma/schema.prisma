@@ -1,0 +1,866 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// ENUMS
+// ----------------------------------------------------------------------------
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  TEACHER
+  ACCOUNTANT
+  PARENT
+  STUDENT
+}
+
+enum Relationship {
+  FATHER
+  MOTHER
+  GUARDIAN
+}
+
+enum SubjectType {
+  THEORY
+  PRACTICAL
+  LANGUAGE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  EXCUSED
+}
+
+enum FeeFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  ANNUAL
+  ONE_TIME
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  RAZORPAY_UPI
+  RAZORPAY_CARD
+  RAZORPAY_NETBANKING
+  RAZORPAY_WALLET
+  CASH
+  CHEQUE
+  BANK_TRANSFER
+  POS
+}
+
+enum PaymentStatus {
+  SUCCESS
+  FAILED
+  PENDING
+  REFUNDED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum NoticeAudience {
+  ALL
+  TEACHERS
+  PARENTS
+  STUDENTS
+  SPECIFIC_CLASSES
+}
+
+enum NoticePriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum AdmissionStatus {
+  DRAFT
+  SUBMITTED
+  DOCUMENT_VERIFIED
+  INTERVIEW_SCHEDULED
+  APPROVED
+  ENROLLED
+  REJECTED
+}
+
+enum SubstitutionStatus {
+  ASSIGNED
+  COMPLETED
+  CANCELLED
+}
+
+// ----------------------------------------------------------------------------
+// TENANT & PLATFORM MODELS
+// ----------------------------------------------------------------------------
+
+model SubscriptionPlan {
+  id           String             @id @default(uuid()) @db.Uuid
+  name         String
+  maxStudents  Int
+  maxStaff     Int
+  features     Json
+  priceMonthly Decimal            @db.Decimal(10, 2)
+  priceAnnual  Decimal            @db.Decimal(10, 2)
+  isActive     Boolean            @default(true)
+  tenants      Tenant[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model Tenant {
+  id                 String             @id @default(uuid()) @db.Uuid
+  name               String
+  slug               String             @unique
+  email              String
+  phone              String
+  address            String
+  city               String
+  state              String
+  pincode            String
+  board              String             // CBSE, ICSE, STATE
+  logoUrl            String?
+  subscriptionPlanId String             @db.Uuid
+  subscriptionPlan   SubscriptionPlan   @relation(fields: [subscriptionPlanId], references: [id])
+  subscriptionStatus SubscriptionStatus @default(ACTIVE)
+  isActive           Boolean            @default(true)
+
+  domains            TenantDomain[]
+  branding           TenantBranding?
+  users              User[]
+  academicYears      AcademicYear[]
+  classGrades        ClassGrade[]
+  sections           Section[]
+  subjects           Subject[]
+  feeCategories      FeeCategory[]
+  feeStructures      FeeStructure[]
+  feeDiscounts       FeeDiscount[]
+  feeInvoices        FeeInvoice[]
+  feePayments        FeePayment[]
+  examTerms          ExamTerm[]
+  examSchedules      ExamSchedule[]
+  examResults        ExamResult[]
+  gradeScales        GradeScale[]
+  periodTimeSlots    PeriodTimeSlot[]
+  timetableEntries   TimetableEntry[]
+  notices            Notice[]
+  auditLogs          AuditLog[]
+  parentalConsents   ParentalConsent[]
+  studentAttendances    StudentAttendance[]
+  staffAttendances      StaffAttendance[]
+  admissionApplications AdmissionApplication[]
+  feeTerms              FeeTerm[]
+  teacherSubstitutions  TeacherSubstitution[]
+
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model TenantDomain {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @db.Uuid
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  domain            String    @unique
+  isPrimary         Boolean   @default(false)
+  isVerified        Boolean   @default(false)
+  verificationToken String?
+  verifiedAt        DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([tenantId])
+}
+
+model TenantBranding {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @unique @db.Uuid
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  primaryColor   String   @default("#111C2D") // Deep Navy Slate (30% Structural)
+  secondaryColor String   @default("#F4F6F9") // Light Gray Canvas (60% Dominant)
+  accentColor    String   @default("#FA896B") // Warm Coral (10% Accent)
+  logoUrl        String?
+  faviconUrl     String?
+  loginBannerUrl String?
+  tagline        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------------------
+// IDENTITY & RBAC MODELS (Tenant Scoped)
+// ----------------------------------------------------------------------------
+
+model User {
+  id                  String            @id @default(uuid()) @db.Uuid
+  tenantId            String?           @db.Uuid // null for Super Admin
+  tenant              Tenant?           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email               String
+  phone               String?
+  passwordHash        String
+  firstName           String
+  lastName            String
+  role                Role
+  avatarUrl           String?
+  isActive            Boolean           @default(true)
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int               @default(0)
+  lockedUntil         DateTime?
+
+  teacherProfile      TeacherProfile?
+  studentProfile      StudentProfile?
+  parentProfile       ParentProfile?
+  refreshTokens       RefreshToken[]
+  authoredNotices     Notice[]
+  staffAttendances    StaffAttendance[]
+  auditLogs           AuditLog[]
+
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  deletedAt           DateTime?
+
+  @@unique([tenantId, email])
+  @@index([tenantId, role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model TeacherProfile {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @db.Uuid
+  userId         String                @unique @db.Uuid
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId     String
+  department     String
+  qualification  String
+  joiningDate    DateTime
+  specialization String?
+
+  classSubjects         ClassSubjectTeacher[]
+  timetables            TimetableEntry[]
+  assignedSubstitutions TeacherSubstitution[] @relation("SubstituteTeacher")
+
+  @@unique([tenantId, employeeId])
+}
+
+model StudentProfile {
+  id               String               @id @default(uuid()) @db.Uuid
+  tenantId         String               @db.Uuid
+  userId           String               @unique @db.Uuid
+  user             User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admissionNumber  String
+  rollNumber       Int?
+  sectionId        String               @db.Uuid
+  section          Section              @relation(fields: [sectionId], references: [id])
+  dateOfBirth      DateTime
+  gender           String
+  bloodGroup       String?
+  address          String
+  emergencyContact String
+  admissionDate    DateTime
+  previousSchool   String?
+
+  parents              ParentStudentLink[]
+  attendances          StudentAttendance[]
+  feeInvoices          FeeInvoice[]
+  examResults          ExamResult[]
+  parentalConsents     ParentalConsent[]
+  admissionApplication AdmissionApplication?
+
+  @@unique([tenantId, admissionNumber])
+  @@index([tenantId, sectionId])
+}
+
+model ParentProfile {
+  id           String              @id @default(uuid()) @db.Uuid
+  tenantId     String              @db.Uuid
+  userId       String              @unique @db.Uuid
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  occupation   String?
+  annualIncome Decimal?            @db.Decimal(12, 2)
+  relationship Relationship        @default(FATHER)
+
+  students     ParentStudentLink[]
+
+  @@index([tenantId])
+}
+
+model ParentStudentLink {
+  id        String         @id @default(uuid()) @db.Uuid
+  tenantId  String         @db.Uuid
+  parentId  String         @db.Uuid
+  parent    ParentProfile  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  studentId String         @db.Uuid
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  isPrimary Boolean        @default(false)
+  createdAt DateTime       @default(now())
+
+  @@unique([parentId, studentId])
+  @@index([tenantId, studentId])
+}
+
+// ----------------------------------------------------------------------------
+// ACADEMIC STRUCTURE MODELS
+// ----------------------------------------------------------------------------
+
+model AcademicYear {
+  id            String         @id @default(uuid()) @db.Uuid
+  tenantId      String         @db.Uuid
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String         // e.g. "2026-27"
+  startDate     DateTime
+  endDate       DateTime
+  isCurrent     Boolean        @default(false)
+
+  classGrades           ClassGrade[]
+  feeStructures         FeeStructure[]
+  feeInvoices           FeeInvoice[]
+  examTerms             ExamTerm[]
+  admissionApplications AdmissionApplication[]
+  feeTerms              FeeTerm[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([tenantId, name])
+  @@index([tenantId, isCurrent])
+}
+
+model ClassGrade {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  tenantId              String                 @db.Uuid
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  academicYearId        String                 @db.Uuid
+  academicYear          AcademicYear           @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  name                  String                 // e.g. "Class 1", "Class 10"
+  numericOrder          Int
+
+  sections              Section[]
+  feeStructures         FeeStructure[]
+  examSchedules         ExamSchedule[]
+  admissionApplications AdmissionApplication[]
+
+  @@unique([tenantId, academicYearId, name])
+  @@index([tenantId, academicYearId])
+}
+
+model Section {
+  id                   String                @id @default(uuid()) @db.Uuid
+  tenantId             String                @db.Uuid
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  classGradeId         String                @db.Uuid
+  classGrade           ClassGrade            @relation(fields: [classGradeId], references: [id], onDelete: Cascade)
+  name                 String                // e.g. "A", "B", "C"
+  classTeacherId       String?               @db.Uuid
+
+  students             StudentProfile[]
+  classSubjectTeachers ClassSubjectTeacher[]
+  timetableEntries     TimetableEntry[]
+  attendances          StudentAttendance[]
+
+  @@unique([classGradeId, name])
+  @@index([tenantId, classGradeId])
+}
+
+model Subject {
+  id                   String                @id @default(uuid()) @db.Uuid
+  tenantId             String                @db.Uuid
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                 String                // e.g. "Mathematics", "Science"
+  code                 String                // e.g. "MATH-041"
+  subjectType          SubjectType           @default(THEORY)
+  isElective           Boolean               @default(false)
+
+  classSubjectTeachers ClassSubjectTeacher[]
+  examSchedules        ExamSchedule[]
+  timetableEntries     TimetableEntry[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model ClassSubjectTeacher {
+  id        String         @id @default(uuid()) @db.Uuid
+  tenantId  String         @db.Uuid
+  sectionId String         @db.Uuid
+  section   Section        @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  subjectId String         @db.Uuid
+  subject   Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId String         @db.Uuid
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, subjectId])
+  @@index([tenantId, teacherId])
+}
+
+// ----------------------------------------------------------------------------
+// ATTENDANCE MODELS
+// ----------------------------------------------------------------------------
+
+model StudentAttendance {
+  id        String           @id @default(uuid()) @db.Uuid
+  tenantId  String           @db.Uuid
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId String           @db.Uuid
+  student   StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sectionId String           @db.Uuid
+  section   Section          @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  date      DateTime         @db.Date
+  period    Int?             // null = daily attendance, 1-8 = period-wise
+  status    AttendanceStatus @default(PRESENT)
+  remarks   String?
+  markedBy  String?          @db.Uuid
+  createdAt DateTime         @default(now())
+
+  @@unique([tenantId, studentId, date, period])
+  @@index([tenantId, sectionId, date])
+}
+
+model StaffAttendance {
+  id           String           @id @default(uuid()) @db.Uuid
+  tenantId     String           @db.Uuid
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId       String           @db.Uuid
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         DateTime         @db.Date
+  status       AttendanceStatus @default(PRESENT)
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  remarks      String?
+  createdAt    DateTime         @default(now())
+
+  @@unique([tenantId, userId, date])
+  @@index([tenantId, date])
+}
+
+// ----------------------------------------------------------------------------
+// INDIAN FEE MANAGEMENT & RAZORPAY MODELS
+// ----------------------------------------------------------------------------
+
+model FeeCategory {
+  id              String           @id @default(uuid()) @db.Uuid
+  tenantId        String           @db.Uuid
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String           // Tuition, Transport, Lab, Annual, Sports
+  description     String?
+  isRecurring     Boolean          @default(true)
+
+  feeStructures   FeeStructure[]
+  feeInvoiceItems FeeInvoiceItem[]
+
+  @@unique([tenantId, name])
+}
+
+model FeeStructure {
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @db.Uuid
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  academicYearId String        @db.Uuid
+  academicYear   AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  classGradeId   String        @db.Uuid
+  classGrade     ClassGrade    @relation(fields: [classGradeId], references: [id], onDelete: Cascade)
+  feeCategoryId  String        @db.Uuid
+  feeCategory    FeeCategory   @relation(fields: [feeCategoryId], references: [id], onDelete: Cascade)
+  amount         Decimal       @db.Decimal(10, 2)
+  frequency      FeeFrequency  @default(QUARTERLY)
+  dueDay         Int           @default(10) // 10th of the month
+
+  @@unique([tenantId, academicYearId, classGradeId, feeCategoryId])
+  @@index([tenantId, classGradeId])
+}
+
+model FeeDiscount {
+  id                   String       @id @default(uuid()) @db.Uuid
+  tenantId             String       @db.Uuid
+  tenant               Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                 String       // Sibling Discount, Staff Ward, Merit
+  discountType         DiscountType @default(PERCENTAGE)
+  value                Decimal      @db.Decimal(10, 2)
+  applicableCategories Json?        // array of feeCategoryIds
+
+  @@unique([tenantId, name])
+}
+
+model FeeInvoice {
+  id             String           @id @default(uuid()) @db.Uuid
+  tenantId       String           @db.Uuid
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  studentId      String           @db.Uuid
+  student        StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYearId String           @db.Uuid
+  academicYear   AcademicYear     @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  invoiceNumber  String
+  totalAmount    Decimal          @db.Decimal(10, 2)
+  discountAmount Decimal          @default(0) @db.Decimal(10, 2)
+  lateFee        Decimal          @default(0) @db.Decimal(10, 2)
+  netAmount      Decimal          @db.Decimal(10, 2)
+  paidAmount     Decimal          @default(0) @db.Decimal(10, 2)
+  balanceAmount  Decimal          @db.Decimal(10, 2)
+  dueDate        DateTime
+  status         InvoiceStatus    @default(PENDING)
+
+  feeTermId      String?          @db.Uuid
+  feeTerm        FeeTerm?         @relation(fields: [feeTermId], references: [id], onDelete: SetNull)
+
+  items          FeeInvoiceItem[]
+  payments       FeePayment[]
+
+  generatedAt    DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, studentId, status])
+  @@index([tenantId, status, dueDate])
+}
+
+model FeeInvoiceItem {
+  id            String      @id @default(uuid()) @db.Uuid
+  tenantId      String      @db.Uuid
+  feeInvoiceId  String      @db.Uuid
+  feeInvoice    FeeInvoice  @relation(fields: [feeInvoiceId], references: [id], onDelete: Cascade)
+  feeCategoryId String      @db.Uuid
+  feeCategory   FeeCategory @relation(fields: [feeCategoryId], references: [id])
+  amount        Decimal     @db.Decimal(10, 2)
+  description   String?
+
+  @@index([feeInvoiceId])
+}
+
+model FeePayment {
+  id                String        @id @default(uuid()) @db.Uuid
+  tenantId          String        @db.Uuid
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  feeInvoiceId      String        @db.Uuid
+  feeInvoice        FeeInvoice    @relation(fields: [feeInvoiceId], references: [id], onDelete: Cascade)
+  amount            Decimal       @db.Decimal(10, 2)
+  paymentMethod     PaymentMethod
+  razorpayPaymentId String?       @unique
+  razorpayOrderId   String?
+  razorpaySignature String?
+  receiptNumber     String
+  status            PaymentStatus @default(SUCCESS)
+  collectedById     String?       @db.Uuid
+  remarks           String?
+  transactionDate   DateTime      @default(now())
+  createdAt         DateTime      @default(now())
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId, feeInvoiceId])
+}
+
+// ----------------------------------------------------------------------------
+// EXAMINATIONS & CBSE/NEP GRADING MODELS
+// ----------------------------------------------------------------------------
+
+model ExamTerm {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @db.Uuid
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  academicYearId String         @db.Uuid
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  name           String         // "Unit Test 1", "Mid-Term", "Annual Exam"
+  startDate      DateTime
+  endDate        DateTime
+  isLocked       Boolean        @default(false)
+
+  examSchedules  ExamSchedule[]
+
+  @@unique([tenantId, academicYearId, name])
+  @@index([tenantId, academicYearId])
+}
+
+model ExamSchedule {
+  id           String       @id @default(uuid()) @db.Uuid
+  tenantId     String       @db.Uuid
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  examTermId   String       @db.Uuid
+  examTerm     ExamTerm     @relation(fields: [examTermId], references: [id], onDelete: Cascade)
+  classGradeId String       @db.Uuid
+  classGrade   ClassGrade   @relation(fields: [classGradeId], references: [id], onDelete: Cascade)
+  subjectId    String       @db.Uuid
+  subject      Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  examDate     DateTime     @db.Date
+  startTime    String       // "09:30"
+  endTime      String       // "12:30"
+  maxMarks     Decimal      @db.Decimal(5, 2)
+  passingMarks Decimal      @db.Decimal(5, 2)
+
+  results      ExamResult[]
+
+  @@unique([examTermId, classGradeId, subjectId])
+  @@index([tenantId, examTermId])
+}
+
+model ExamResult {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @db.Uuid
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  examScheduleId String         @db.Uuid
+  examSchedule   ExamSchedule   @relation(fields: [examScheduleId], references: [id], onDelete: Cascade)
+  studentId      String         @db.Uuid
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  marksObtained  Decimal        @db.Decimal(5, 2)
+  grade          String?        // A1, A2, B1, etc.
+  gradePoint     Decimal?       @db.Decimal(3, 1)
+  remarks        String?
+  enteredById    String         @db.Uuid
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([examScheduleId, studentId])
+  @@index([tenantId, studentId])
+}
+
+model GradeScale {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String   // "CBSE 10-Point CCE"
+  minPercentage Decimal  @db.Decimal(5, 2)
+  maxPercentage Decimal  @db.Decimal(5, 2)
+  grade         String   // "A1"
+  gradePoint    Decimal  @db.Decimal(3, 1)
+  description   String?
+
+  @@index([tenantId])
+}
+
+// ----------------------------------------------------------------------------
+// TIMETABLE & DAILY SCHEDULE
+// ----------------------------------------------------------------------------
+
+model PeriodTimeSlot {
+  id               String           @id @default(uuid()) @db.Uuid
+  tenantId         String           @db.Uuid
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String           // "Period 1", "Lunch Break"
+  startTime        String           // "08:30"
+  endTime          String           // "09:15"
+  order            Int
+  isBreak          Boolean          @default(false)
+
+  timetableEntries TimetableEntry[]
+
+  @@unique([tenantId, order])
+  @@index([tenantId])
+}
+
+model TimetableEntry {
+  id               String          @id @default(uuid()) @db.Uuid
+  tenantId         String          @db.Uuid
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sectionId        String          @db.Uuid
+  section          Section         @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  periodTimeSlotId String          @db.Uuid
+  periodTimeSlot   PeriodTimeSlot  @relation(fields: [periodTimeSlotId], references: [id], onDelete: Cascade)
+  subjectId        String?         @db.Uuid
+  subject          Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  teacherId        String?         @db.Uuid
+  teacher          TeacherProfile? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  dayOfWeek        DayOfWeek
+  substitutions    TeacherSubstitution[]
+
+  @@unique([sectionId, periodTimeSlotId, dayOfWeek])
+  @@index([tenantId, teacherId, dayOfWeek])
+}
+
+// ----------------------------------------------------------------------------
+// COMMUNICATION, AUDIT & DPDP ACT COMPLIANCE
+// ----------------------------------------------------------------------------
+
+model Notice {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @db.Uuid
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title          String
+  content        String         @db.Text
+  authorId       String         @db.Uuid
+  author         User           @relation(fields: [authorId], references: [id])
+  priority       NoticePriority @default(NORMAL)
+  targetAudience NoticeAudience @default(ALL)
+  targetClasses  Json?          // array of section IDs or class IDs
+  publishedAt    DateTime       @default(now())
+  expiresAt      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([tenantId, publishedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String?  @db.Uuid
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId     String?  @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String   // "STUDENT_CREATED", "FEE_COLLECTED", "MARKS_ENTERED"
+  entityType String   // "Student", "FeeInvoice", "ExamResult"
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, action])
+}
+
+model ParentalConsent {
+  id           String         @id @default(uuid()) @db.Uuid
+  tenantId     String         @db.Uuid
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentId     String         @db.Uuid
+  studentId    String         @db.Uuid
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  consentType  String         // "DPDP_GENERAL_DATA_PROCESSING", "PHOTO_PUBLISH"
+  consentGiven Boolean        @default(true)
+  consentText  String         @db.Text
+  ipAddress    String?
+  givenAt      DateTime       @default(now())
+  revokedAt    DateTime?
+
+  @@index([tenantId, studentId])
+}
+
+// ----------------------------------------------------------------------------
+// ADMISSION INTAKE & 1-CLICK ENROLLMENT MODELS
+// ----------------------------------------------------------------------------
+
+model AdmissionApplication {
+  id                String          @id @default(uuid()) @db.Uuid
+  tenantId          String          @db.Uuid
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  academicYearId    String          @db.Uuid
+  academicYear      AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  classGradeId      String          @db.Uuid
+  classGrade        ClassGrade      @relation(fields: [classGradeId], references: [id], onDelete: Cascade)
+  applicationNumber String
+  studentFirstName  String
+  studentLastName   String
+  dateOfBirth       DateTime        @db.Date
+  gender            String
+  bloodGroup        String?
+  aadhaarNumber     String?
+  parentName        String
+  parentPhone       String
+  parentEmail       String?
+  relationship      Relationship    @default(FATHER)
+  address           String
+  previousSchool    String?
+  previousMarks     Decimal?        @db.Decimal(5, 2)
+  applicationFee    Decimal         @default(500.00) @db.Decimal(10, 2)
+  isFeePaid         Boolean         @default(false)
+  paymentReference  String?
+  status            AdmissionStatus @default(SUBMITTED)
+  enrolledStudentId String?         @unique @db.Uuid
+  enrolledStudent   StudentProfile? @relation(fields: [enrolledStudentId], references: [id], onDelete: SetNull)
+  interviewDate     DateTime?
+  adminRemarks      String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([tenantId, applicationNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, classGradeId])
+}
+
+// ----------------------------------------------------------------------------
+// INDIAN FEE TERMS & LATE FINE MODELS
+// ----------------------------------------------------------------------------
+
+model FeeTerm {
+  id               String       @id @default(uuid()) @db.Uuid
+  tenantId         String       @db.Uuid
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  academicYearId   String       @db.Uuid
+  academicYear     AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  name             String       // "Quarter 1 (Apr - Jun)", "Quarter 2 (Jul - Sep)"
+  termNumber       Int          // 1, 2, 3, 4
+  startDate        DateTime     @db.Date
+  endDate          DateTime     @db.Date
+  dueDate          DateTime     @db.Date
+  lateFeeGraceDays Int          @default(10) // Fines kick in after grace period
+  lateFeeAmount    Decimal      @default(50.00) @db.Decimal(10, 2)
+  lateFeePerDay    Boolean      @default(false)
+
+  feeInvoices      FeeInvoice[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@unique([tenantId, academicYearId, termNumber])
+  @@index([tenantId, academicYearId])
+}
+
+// ----------------------------------------------------------------------------
+// TEACHER SUBSTITUTION ENGINE
+// ----------------------------------------------------------------------------
+
+model TeacherSubstitution {
+  id                  String             @id @default(uuid()) @db.Uuid
+  tenantId            String             @db.Uuid
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  timetableEntryId    String             @db.Uuid
+  timetableEntry      TimetableEntry     @relation(fields: [timetableEntryId], references: [id], onDelete: Cascade)
+  originalTeacherId   String             @db.Uuid
+  substituteTeacherId String             @db.Uuid
+  substituteTeacher   TeacherProfile     @relation("SubstituteTeacher", fields: [substituteTeacherId], references: [id], onDelete: Cascade)
+  date                DateTime           @db.Date
+  reason              String?
+  status              SubstitutionStatus @default(ASSIGNED)
+  assignedById        String             @db.Uuid
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@unique([tenantId, timetableEntryId, date])
+  @@index([tenantId, date])
+  @@index([tenantId, substituteTeacherId, date])
+}
+
