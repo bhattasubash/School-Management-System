@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Bell,
   Search,
@@ -28,6 +29,7 @@ import {
   Footprints,
   Bus,
   FileCheck2,
+  LogOut,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -102,18 +104,30 @@ export default function DashboardPage() {
               </span>
             </button>
 
-            {/* User Profile Avatar with Student Illustration & Name */}
-            <div className="flex items-center gap-2.5 pl-2 cursor-pointer group">
-              <div className="w-9 h-9 rounded-full bg-[#E2E8F0] border border-slate-300 overflow-hidden shrink-0 group-hover:border-[#FF7555] transition-colors relative">
+            {/* User Profile Avatar with Student Illustration, Name & Switch/Logout button */}
+            <div className="flex items-center gap-2.5 pl-2">
+              <div className="w-9 h-9 rounded-full bg-[#E2E8F0] border border-slate-300 overflow-hidden shrink-0 relative">
                 <img
                   src="/student-avatar.jpg"
                   alt="Rohan Sharma"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <span className="text-xs font-bold text-[#132033] hidden sm:inline-block group-hover:text-[#FF7555] transition-colors">
-                Rohan Sharma
-              </span>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-xs font-bold text-[#132033] leading-tight">
+                  Rohan Sharma
+                </span>
+                <span className="text-[10px] text-gray-500 leading-tight">
+                  Student / Parent Portal
+                </span>
+              </div>
+              <Link
+                href="/login"
+                className="ml-1 p-1.5 rounded-lg text-[#6F7D8D] hover:text-[#FF7555] hover:bg-[#FFF2EE] transition-colors"
+                title="Switch Role / Sign Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>

@@ -109,6 +109,8 @@ export interface JWTPayload {
   tenantId: string | null; // null for Super Admin
   role: RoleType;
   email: string;
+  firstName?: string;
+  lastName?: string;
   iat?: number;
   exp?: number;
 }
@@ -121,6 +123,13 @@ export interface UserSession {
   firstName: string;
   lastName: string;
   avatarUrl?: string | null;
+}
+
+export interface AuthResult {
+  success: boolean;
+  user?: UserSession;
+  redirectUrl?: string;
+  error?: string;
 }
 
 // ----------------------------------------------------------------------------
