@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { logoutAction } from '@/actions/auth';
 import Image from 'next/image';
-import Link from 'next/link';
 import {
   Bell,
   Search,
@@ -121,13 +121,15 @@ export default function DashboardPage() {
                   Student / Parent Portal
                 </span>
               </div>
-              <Link
-                href="/login"
-                className="ml-1 p-1.5 rounded-lg text-[#6F7D8D] hover:text-[#FF7555] hover:bg-[#FFF2EE] transition-colors"
-                title="Switch Role / Sign Out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </Link>
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  className="ml-1 p-1.5 rounded-lg text-[#6F7D8D] hover:text-[#FF7555] hover:bg-[#FFF2EE] transition-colors cursor-pointer"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </form>
             </div>
           </div>
         </div>

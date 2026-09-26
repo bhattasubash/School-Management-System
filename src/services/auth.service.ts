@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db';
 import { createSessionToken } from '@/lib/session';
 import type { LoginInput } from '@/lib/validations/auth';
 import type { RoleType, UserSession } from '@/types';
-import { Role } from '@/types';
 
 export interface AuthenticationResult {
   success: boolean;
@@ -48,7 +47,9 @@ export class AuthService {
 
     // 1. Resolve user query:
     // If tenantId is provided, strictly scope query to that tenant.
-    // If tenantId is null, only Super Admin accounts can authenticate.
+    // If tenantId is null (e.g. localhost / super-admin domain), search by email
+    // across all users so tenant accounts also work in local development.
+    // Role-based route guards (middleware) enforce dashboard access post-login.
     const user = tenantId
       ? await prisma.user.findFirst({
           where: {
@@ -60,7 +61,6 @@ export class AuthService {
       : await prisma.user.findFirst({
           where: {
             email,
-            role: Role.SUPER_ADMIN,
             deletedAt: null,
           },
         });

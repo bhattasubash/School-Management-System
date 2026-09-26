@@ -355,8 +355,9 @@ function LoginForm() {
             {/* Field 1: User ID / Registration Number */}
             <div className="relative rounded-xl">
               <input
-                type="text"
+                type="email"
                 required
+                autoComplete="username email"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="Registration No. / User ID"
@@ -372,6 +373,7 @@ function LoginForm() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
