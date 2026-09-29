@@ -144,7 +144,25 @@ export async function generateQuarterlyInvoicesForClass(
     }
 
     const currentYear = new Date().getFullYear();
-    let currentCount = await tx.feeInvoice.count({ where: { tenantId } });
+    const latestInvoice = await tx.feeInvoice.findFirst({
+      where: {
+        tenantId,
+        invoiceNumber: {
+          startsWith: `INV-${currentYear}-`,
+        },
+      },
+      orderBy: { invoiceNumber: 'desc' },
+      select: { invoiceNumber: true },
+    });
+
+    let currentCount = 0;
+    if (latestInvoice?.invoiceNumber) {
+      const parts = latestInvoice.invoiceNumber.split('-');
+      const parsed = parseInt(parts[2], 10);
+      if (!isNaN(parsed)) currentCount = parsed;
+    } else {
+      currentCount = await tx.feeInvoice.count({ where: { tenantId } });
+    }
 
     const totalTermAmount = feeStructures.reduce((sum, fs) => sum + Number(fs.amount), 0);
     const createdInvoices: FeeInvoice[] = [];
@@ -164,7 +182,17 @@ export async function generateQuarterlyInvoicesForClass(
       }
 
       currentCount++;
-      const invoiceNumber = `INV-${currentYear}-${String(currentCount).padStart(5, '0')}`;
+      let invoiceNumber = `INV-${currentYear}-${String(currentCount).padStart(5, '0')}`;
+      let invExists = await tx.feeInvoice.findFirst({
+        where: { tenantId, invoiceNumber },
+      });
+      while (invExists) {
+        currentCount++;
+        invoiceNumber = `INV-${currentYear}-${String(currentCount).padStart(5, '0')}`;
+        invExists = await tx.feeInvoice.findFirst({
+          where: { tenantId, invoiceNumber },
+        });
+      }
 
       const invoice = await tx.feeInvoice.create({
         data: {

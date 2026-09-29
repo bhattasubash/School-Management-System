@@ -94,12 +94,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // Protected route prefixes
+  const isRootPortal = pathname === '/';
   const requiresAdmin = pathname.startsWith('/admin');
   const requiresTeacher = pathname.startsWith('/teacher');
   const requiresSuperAdmin = pathname.startsWith('/superadmin');
   const requiresPortal = pathname.startsWith('/portal');
 
-  const isProtectedRoute = requiresAdmin || requiresTeacher || requiresSuperAdmin || requiresPortal;
+  const isProtectedRoute = isRootPortal || requiresAdmin || requiresTeacher || requiresSuperAdmin || requiresPortal;
 
   if (isProtectedRoute && !session) {
     const loginUrl = new URL('/login', request.url);
@@ -108,6 +109,26 @@ export async function middleware(request: NextRequest) {
   }
 
   if (session) {
+    // If authenticated user visits root portal (/), redirect staff/admin to their dedicated dashboards
+    if (isRootPortal) {
+      if (session.role === 'ADMIN') {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
+      if (session.role === 'TEACHER') {
+        return NextResponse.redirect(new URL('/teacher', request.url));
+      }
+      if (session.role === 'SUPER_ADMIN') {
+        return NextResponse.redirect(new URL('/superadmin', request.url));
+      }
+      if (session.role === 'ACCOUNTANT') {
+        return NextResponse.redirect(new URL('/admin/fees', request.url));
+      }
+      // STUDENT and PARENT stay on / (Unified Student & Parent Portal)
+      if (session.role !== 'STUDENT' && session.role !== 'PARENT') {
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
+      }
+    }
+
     // Check specific role requirements
     if (requiresSuperAdmin && session.role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/unauthorized', request.url));

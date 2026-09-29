@@ -48,22 +48,35 @@ export class AuthService {
 
     // 1. Resolve user query:
     // If tenantId is provided, strictly scope query to that tenant.
-    // If tenantId is null, only Super Admin accounts can authenticate.
-    const user = tenantId
-      ? await prisma.user.findFirst({
+    // If tenantId is null (e.g. localhost development or unified platform login),
+    // first look for platform Super Admin, then discover tenant user by email.
+    let user;
+    if (tenantId) {
+      user = await prisma.user.findFirst({
+        where: {
+          tenantId,
+          email,
+          deletedAt: null,
+        },
+      });
+    } else {
+      user = await prisma.user.findFirst({
+        where: {
+          email,
+          role: Role.SUPER_ADMIN,
+          deletedAt: null,
+        },
+      });
+
+      if (!user) {
+        user = await prisma.user.findFirst({
           where: {
-            tenantId,
             email,
-            deletedAt: null,
-          },
-        })
-      : await prisma.user.findFirst({
-          where: {
-            email,
-            role: Role.SUPER_ADMIN,
             deletedAt: null,
           },
         });
+      }
+    }
 
     // Timing-attack prevention & invalid user response
     if (!user) {

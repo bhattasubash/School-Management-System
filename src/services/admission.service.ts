@@ -50,8 +50,18 @@ export async function submitAdmissionApplication(
     },
   });
 
-  const sequentialNumber = String(count + 1).padStart(4, '0');
-  const applicationNumber = `ADM-${currentYear}-${sequentialNumber}`;
+  let nextSeq = count + 1;
+  let applicationNumber = `ADM-${currentYear}-${String(nextSeq).padStart(4, '0')}`;
+  let exists = await prisma.admissionApplication.findFirst({
+    where: { tenantId, applicationNumber },
+  });
+  while (exists) {
+    nextSeq++;
+    applicationNumber = `ADM-${currentYear}-${String(nextSeq).padStart(4, '0')}`;
+    exists = await prisma.admissionApplication.findFirst({
+      where: { tenantId, applicationNumber },
+    });
+  }
 
   return prisma.admissionApplication.create({
     data: {

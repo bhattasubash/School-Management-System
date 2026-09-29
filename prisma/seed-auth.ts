@@ -1,4 +1,14 @@
-import { PrismaClient, Role, SubscriptionStatus, DayOfWeek, SubstitutionStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  Role,
+  SubscriptionStatus,
+  DayOfWeek,
+  SubstitutionStatus,
+  NoticeAudience,
+  NoticePriority,
+  AttendanceStatus,
+  InvoiceStatus,
+} from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -226,8 +236,13 @@ async function main() {
     }
 
     if (item.role === Role.STUDENT && item.tenantId) {
-      const existingProfile = await prisma.studentProfile.findFirst({
-        where: { userId: user.id },
+      let existingProfile = await prisma.studentProfile.findFirst({
+        where: {
+          OR: [
+            { userId: user.id },
+            { tenantId: item.tenantId, admissionNumber: 'DPS-2022-4891' },
+          ],
+        },
       });
       if (!existingProfile) {
         await prisma.studentProfile.create({
@@ -245,11 +260,16 @@ async function main() {
             admissionDate: new Date('2022-04-10'),
           },
         });
+      } else if (existingProfile.userId !== user.id) {
+        await prisma.studentProfile.update({
+          where: { id: existingProfile.id },
+          data: { userId: user.id },
+        });
       }
     }
 
     if (item.role === Role.PARENT && item.tenantId) {
-      const existingProfile = await prisma.parentProfile.findFirst({
+      let existingProfile = await prisma.parentProfile.findFirst({
         where: { userId: user.id },
       });
       if (!existingProfile) {
@@ -259,6 +279,7 @@ async function main() {
             userId: user.id,
             occupation: 'Architectural Consultant',
             annualIncome: 1800000.0,
+            relationship: 'FATHER',
           },
         });
       }
@@ -299,7 +320,12 @@ async function main() {
     }
 
     let sp = await prisma.studentProfile.findFirst({
-      where: { tenantId: tenant.id, userId: u.id },
+      where: {
+        OR: [
+          { tenantId: tenant.id, userId: u.id },
+          { tenantId: tenant.id, admissionNumber: s.adm },
+        ],
+      },
     });
     if (!sp) {
       await prisma.studentProfile.create({
@@ -315,6 +341,11 @@ async function main() {
           emergencyContact: '+91 98111 22233',
           admissionDate: new Date('2022-04-10'),
         },
+      });
+    } else if (sp.userId !== u.id) {
+      await prisma.studentProfile.update({
+        where: { id: sp.id },
+        data: { userId: u.id },
       });
     }
   }
@@ -450,6 +481,308 @@ async function main() {
         },
       });
       console.log('Seeded sample active substitution for teacher');
+    }
+  }
+
+  // 9. Ensure Remaining CBSE Subjects exist (ENG-184, SOC-087, HIN-002)
+  const moreSubjects = [
+    { code: 'ENG-184', name: 'English Language & Lit.' },
+    { code: 'SOC-087', name: 'Social Science' },
+    { code: 'HIN-002', name: 'Hindi Course A' },
+  ];
+  for (const s of moreSubjects) {
+    let sub = await prisma.subject.findFirst({
+      where: { tenantId: tenant.id, code: s.code },
+    });
+    if (!sub) {
+      await prisma.subject.create({
+        data: {
+          tenantId: tenant.id,
+          code: s.code,
+          name: s.name,
+        },
+      });
+    }
+  }
+
+  // 10. Link Parent (Rajesh Sharma) to Rohan Sharma (Primary) and Aanya Patel (Sibling)
+  const parentUser = await prisma.user.findFirst({
+    where: { tenantId: tenant.id, email: 'parent@dps.edu.in' },
+    include: { parentProfile: true },
+  });
+
+  const rohanProfile = await prisma.studentProfile.findFirst({
+    where: { tenantId: tenant.id, admissionNumber: 'DPS-2022-4891' },
+  });
+
+  const aanyaProfile = await prisma.studentProfile.findFirst({
+    where: { tenantId: tenant.id, admissionNumber: 'DPS-2022-4892' },
+  });
+
+  if (parentUser?.parentProfile && rohanProfile) {
+    const linkRohan = await prisma.parentStudentLink.findUnique({
+      where: {
+        parentId_studentId: {
+          parentId: parentUser.parentProfile.id,
+          studentId: rohanProfile.id,
+        },
+      },
+    });
+    if (!linkRohan) {
+      await prisma.parentStudentLink.create({
+        data: {
+          tenantId: tenant.id,
+          parentId: parentUser.parentProfile.id,
+          studentId: rohanProfile.id,
+          isPrimary: true,
+        },
+      });
+      console.log('Linked Parent to Rohan Sharma (Primary Child)');
+    }
+  }
+
+  if (parentUser?.parentProfile && aanyaProfile) {
+    const linkAanya = await prisma.parentStudentLink.findUnique({
+      where: {
+        parentId_studentId: {
+          parentId: parentUser.parentProfile.id,
+          studentId: aanyaProfile.id,
+        },
+      },
+    });
+    if (!linkAanya) {
+      await prisma.parentStudentLink.create({
+        data: {
+          tenantId: tenant.id,
+          parentId: parentUser.parentProfile.id,
+          studentId: aanyaProfile.id,
+          isPrimary: false,
+        },
+      });
+      console.log('Linked Parent to Aanya Patel (Sibling)');
+    }
+  }
+
+  // 11. Seed Student Attendance records for Rohan Sharma (past 15 school days)
+  if (rohanProfile) {
+    const today = new Date();
+    for (let i = 1; i <= 20; i++) {
+      const pastDate = new Date(today);
+      pastDate.setDate(today.getDate() - i);
+      // Skip weekends
+      if (pastDate.getDay() === 0 || pastDate.getDay() === 6) continue;
+
+      const dateOnly = new Date(`${pastDate.toISOString().split('T')[0]}T00:00:00.000Z`);
+
+      const existingAtt = await prisma.studentAttendance.findFirst({
+        where: {
+          tenantId: tenant.id,
+          studentId: rohanProfile.id,
+          date: dateOnly,
+          period: null,
+        },
+      });
+
+      if (!existingAtt) {
+        let status: AttendanceStatus = AttendanceStatus.PRESENT;
+        if (i === 4) status = AttendanceStatus.LATE;
+        else if (i === 11) status = AttendanceStatus.EXCUSED;
+
+        await prisma.studentAttendance.create({
+          data: {
+            tenantId: tenant.id,
+            studentId: rohanProfile.id,
+            sectionId: rohanProfile.sectionId,
+            date: dateOnly,
+            period: null,
+            status,
+            remarks: status === AttendanceStatus.LATE ? 'Delayed by school bus route' : undefined,
+          },
+        });
+      }
+    }
+  }
+
+  // 12. Seed Exam Term, Exam Schedules, and Exam Results
+  let examTerm = await prisma.examTerm.findFirst({
+    where: { tenantId: tenant.id, academicYearId: academicYear.id, name: 'Mid-Term Examination 2026' },
+  });
+  if (!examTerm) {
+    examTerm = await prisma.examTerm.create({
+      data: {
+        tenantId: tenant.id,
+        academicYearId: academicYear.id,
+        name: 'Mid-Term Examination 2026',
+        startDate: new Date('2026-09-01'),
+        endDate: new Date('2026-09-20'),
+      },
+    });
+  }
+
+  const allSubjects = await prisma.subject.findMany({
+    where: { tenantId: tenant.id },
+  });
+
+  const scoresByCode: Record<string, { marks: number; grade: string; gp: number }> = {
+    'MATH-041': { marks: 92, grade: 'A1', gp: 10.0 },
+    'SCI-086': { marks: 86, grade: 'A2', gp: 9.0 },
+    'ENG-184': { marks: 95, grade: 'A1', gp: 10.0 },
+    'SOC-087': { marks: 78, grade: 'B1', gp: 8.0 },
+    'HIN-002': { marks: 71, grade: 'B1', gp: 8.0 },
+  };
+
+  if (rohanProfile && mainTeacherProfileId) {
+    for (const sub of allSubjects) {
+      if (!scoresByCode[sub.code]) continue;
+
+      let sched = await prisma.examSchedule.findFirst({
+        where: {
+          tenantId: tenant.id,
+          examTermId: examTerm.id,
+          classGradeId: classGrade.id,
+          subjectId: sub.id,
+        },
+      });
+
+      if (!sched) {
+        sched = await prisma.examSchedule.create({
+          data: {
+            tenantId: tenant.id,
+            examTermId: examTerm.id,
+            classGradeId: classGrade.id,
+            subjectId: sub.id,
+            examDate: new Date('2026-09-10'),
+            startTime: '09:00',
+            endTime: '12:00',
+            maxMarks: 100,
+            passingMarks: 33,
+          },
+        });
+      }
+
+      const existingResult = await prisma.examResult.findFirst({
+        where: {
+          tenantId: tenant.id,
+          examScheduleId: sched.id,
+          studentId: rohanProfile.id,
+        },
+      });
+
+      if (!existingResult) {
+        const score = scoresByCode[sub.code];
+        await prisma.examResult.create({
+          data: {
+            tenantId: tenant.id,
+            examScheduleId: sched.id,
+            studentId: rohanProfile.id,
+            marksObtained: score.marks,
+            grade: score.grade,
+            gradePoint: score.gp,
+            enteredById: mainTeacherProfileId,
+          },
+        });
+      }
+    }
+  }
+
+  // 13. Seed Fee Invoices for Rohan Sharma
+  if (rohanProfile) {
+    let inv1 = await prisma.feeInvoice.findFirst({
+      where: { tenantId: tenant.id, invoiceNumber: 'INV-2026-0001' },
+    });
+    if (!inv1) {
+      await prisma.feeInvoice.create({
+        data: {
+          tenantId: tenant.id,
+          studentId: rohanProfile.id,
+          academicYearId: academicYear.id,
+          invoiceNumber: 'INV-2026-0001',
+          totalAmount: 22000.0,
+          discountAmount: 0.0,
+          lateFee: 0.0,
+          netAmount: 22000.0,
+          paidAmount: 22000.0,
+          balanceAmount: 0.0,
+          dueDate: new Date('2026-05-10'),
+          status: InvoiceStatus.PAID,
+        },
+      });
+    }
+
+    let inv2 = await prisma.feeInvoice.findFirst({
+      where: { tenantId: tenant.id, invoiceNumber: 'INV-2026-0002' },
+    });
+    if (!inv2) {
+      const nextMonth = new Date();
+      nextMonth.setDate(nextMonth.getDate() + 15);
+      await prisma.feeInvoice.create({
+        data: {
+          tenantId: tenant.id,
+          studentId: rohanProfile.id,
+          academicYearId: academicYear.id,
+          invoiceNumber: 'INV-2026-0002',
+          totalAmount: 18500.0,
+          discountAmount: 0.0,
+          lateFee: 0.0,
+          netAmount: 18500.0,
+          paidAmount: 0.0,
+          balanceAmount: 18500.0,
+          dueDate: nextMonth,
+          status: InvoiceStatus.PENDING,
+        },
+      });
+    }
+  }
+
+  // 14. Seed Institutional Notices
+  const noticesToSeed = [
+    {
+      title: 'CBSE Class 10 Term-I Practical Examination Schedule Released',
+      content: 'All class 10 students are required to review the physics and chemistry laboratory schedule.',
+      priority: NoticePriority.IMPORTANT,
+      audience: NoticeAudience.ALL,
+    },
+    {
+      title: 'Mid-Term Assessment Report Cards Distribution',
+      content: 'Official CBSE verified scorecards for Term 1 will be uploaded and accessible via portal.',
+      priority: NoticePriority.NORMAL,
+      audience: NoticeAudience.PARENTS,
+    },
+    {
+      title: 'Annual Inter-School STEM and Robotics Championship 2026',
+      content: 'Students wishing to participate in the upcoming regional robotics Olympiad should submit their names.',
+      priority: NoticePriority.NORMAL,
+      audience: NoticeAudience.STUDENTS,
+    },
+    {
+      title: 'Winter Uniform Mandatory Guidelines Effective Next Monday',
+      content: 'In accordance with school dress code policy, full winter blazers and ties are mandatory.',
+      priority: NoticePriority.NORMAL,
+      audience: NoticeAudience.ALL,
+    },
+  ];
+
+  const adminUser = await prisma.user.findFirst({
+    where: { tenantId: tenant.id, role: Role.ADMIN },
+  });
+
+  if (adminUser) {
+    for (const n of noticesToSeed) {
+      let existingNotice = await prisma.notice.findFirst({
+        where: { tenantId: tenant.id, title: n.title },
+      });
+      if (!existingNotice) {
+        await prisma.notice.create({
+          data: {
+            tenantId: tenant.id,
+            authorId: adminUser.id,
+            title: n.title,
+            content: n.content,
+            priority: n.priority,
+            targetAudience: n.audience,
+          },
+        });
+      }
     }
   }
 
