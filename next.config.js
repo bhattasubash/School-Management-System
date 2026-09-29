@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverComponentsExternalPackages: [
+      'bcryptjs',
+      '@prisma/client',
+      'ioredis',
+      'bullmq',
+      'razorpay',
+    ],
+  },
   async headers() {
     return [
       {
