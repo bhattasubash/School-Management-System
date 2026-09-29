@@ -9,6 +9,7 @@ import StudentParentDashboardClient, {
 
 export const dynamic = 'force-dynamic';
 
+
 interface PageProps {
   searchParams?: {
     child?: string;

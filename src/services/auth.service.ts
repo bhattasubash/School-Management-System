@@ -3,7 +3,6 @@ import { prisma } from '@/lib/db';
 import { createSessionToken } from '@/lib/session';
 import type { LoginInput } from '@/lib/validations/auth';
 import type { RoleType, UserSession } from '@/types';
-import { Role } from '@/types';
 
 export interface AuthenticationResult {
   success: boolean;
@@ -63,7 +62,7 @@ export class AuthService {
       user = await prisma.user.findFirst({
         where: {
           email,
-          role: Role.SUPER_ADMIN,
+          role: 'SUPER_ADMIN',
           deletedAt: null,
         },
       });
