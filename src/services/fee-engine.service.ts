@@ -281,8 +281,36 @@ export async function collectFeePaymentAtomic(
 
     // 3. Generate tenant-scoped receipt number: REC-2026-00001
     const currentYear = new Date().getFullYear();
-    const paymentCount = await tx.feePayment.count({ where: { tenantId } });
-    const receiptNumber = `REC-${currentYear}-${String(paymentCount + 1).padStart(5, '0')}`;
+    const latestPayment = await tx.feePayment.findFirst({
+      where: {
+        tenantId,
+        receiptNumber: { startsWith: `REC-${currentYear}-` },
+      },
+      orderBy: { receiptNumber: 'desc' },
+      select: { receiptNumber: true },
+    });
+
+    let currentReceiptNum = 0;
+    if (latestPayment?.receiptNumber) {
+      const parts = latestPayment.receiptNumber.split('-');
+      const num = parseInt(parts[2], 10);
+      if (!isNaN(num)) currentReceiptNum = num;
+    } else {
+      currentReceiptNum = await tx.feePayment.count({ where: { tenantId } });
+    }
+
+    currentReceiptNum++;
+    let receiptNumber = `REC-${currentYear}-${String(currentReceiptNum).padStart(5, '0')}`;
+    let recExists = await tx.feePayment.findFirst({
+      where: { tenantId, receiptNumber },
+    });
+    while (recExists) {
+      currentReceiptNum++;
+      receiptNumber = `REC-${currentYear}-${String(currentReceiptNum).padStart(5, '0')}`;
+      recExists = await tx.feePayment.findFirst({
+        where: { tenantId, receiptNumber },
+      });
+    }
 
     // 4. Create Fee Payment
     const payment = await tx.feePayment.create({

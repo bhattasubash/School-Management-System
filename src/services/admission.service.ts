@@ -267,8 +267,30 @@ export async function enrollStudentFromApplication(
 
       if (feeStructure) {
         const invoiceYear = new Date().getFullYear();
-        const invoiceCount = await tx.feeInvoice.count({ where: { tenantId } });
-        const invoiceNumber = `INV-${invoiceYear}-${String(invoiceCount + 1).padStart(5, '0')}`;
+        const latestInvoice = await tx.feeInvoice.findFirst({
+          where: { tenantId, invoiceNumber: { startsWith: `INV-${invoiceYear}-` } },
+          orderBy: { invoiceNumber: 'desc' },
+          select: { invoiceNumber: true },
+        });
+
+        let invoiceCount = 0;
+        if (latestInvoice?.invoiceNumber) {
+          const parts = latestInvoice.invoiceNumber.split('-');
+          const num = parseInt(parts[2], 10);
+          if (!isNaN(num)) invoiceCount = num;
+        } else {
+          invoiceCount = await tx.feeInvoice.count({ where: { tenantId } });
+        }
+
+        invoiceCount++;
+        let invoiceNumber = `INV-${invoiceYear}-${String(invoiceCount).padStart(5, '0')}`;
+        let invExists = await tx.feeInvoice.findFirst({ where: { tenantId, invoiceNumber } });
+        while (invExists) {
+          invoiceCount++;
+          invoiceNumber = `INV-${invoiceYear}-${String(invoiceCount).padStart(5, '0')}`;
+          invExists = await tx.feeInvoice.findFirst({ where: { tenantId, invoiceNumber } });
+        }
+
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 15); // 15 days to pay
 

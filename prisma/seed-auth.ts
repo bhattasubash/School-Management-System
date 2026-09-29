@@ -685,17 +685,180 @@ async function main() {
     }
   }
 
-  // 13. Seed Fee Invoices for Rohan Sharma
+  // 13. Seed Fee Terms, Categories, Structures & Invoices
+  const feeTermsData = [
+    {
+      name: 'Quarter 1 (Apr - Jun)',
+      termNumber: 1,
+      startDate: new Date('2026-04-01'),
+      endDate: new Date('2026-06-30'),
+      dueDate: new Date('2026-04-15'),
+      lateFeeGraceDays: 10,
+      lateFeeAmount: 50.0,
+    },
+    {
+      name: 'Quarter 2 (Jul - Sep)',
+      termNumber: 2,
+      startDate: new Date('2026-07-01'),
+      endDate: new Date('2026-09-30'),
+      dueDate: new Date('2026-07-15'),
+      lateFeeGraceDays: 10,
+      lateFeeAmount: 50.0,
+    },
+    {
+      name: 'Quarter 3 (Oct - Dec)',
+      termNumber: 3,
+      startDate: new Date('2026-10-01'),
+      endDate: new Date('2026-12-31'),
+      dueDate: new Date('2026-10-15'),
+      lateFeeGraceDays: 10,
+      lateFeeAmount: 50.0,
+    },
+    {
+      name: 'Quarter 4 (Jan - Mar)',
+      termNumber: 4,
+      startDate: new Date('2027-01-01'),
+      endDate: new Date('2027-03-31'),
+      dueDate: new Date('2027-01-15'),
+      lateFeeGraceDays: 10,
+      lateFeeAmount: 50.0,
+    },
+  ];
+
+  const createdFeeTerms: any[] = [];
+  for (const ft of feeTermsData) {
+    let term = await prisma.feeTerm.findFirst({
+      where: { tenantId: tenant.id, academicYearId: academicYear.id, termNumber: ft.termNumber },
+    });
+    if (!term) {
+      term = await prisma.feeTerm.create({
+        data: {
+          tenantId: tenant.id,
+          academicYearId: academicYear.id,
+          name: ft.name,
+          termNumber: ft.termNumber,
+          startDate: ft.startDate,
+          endDate: ft.endDate,
+          dueDate: ft.dueDate,
+          lateFeeGraceDays: ft.lateFeeGraceDays,
+          lateFeeAmount: ft.lateFeeAmount,
+          lateFeePerDay: false,
+        },
+      });
+    }
+    createdFeeTerms.push(term);
+  }
+
+  // Seed Fee Categories
+  const tuitionCat = await prisma.feeCategory.upsert({
+    where: { tenantId_name: { tenantId: tenant.id, name: 'Tuition Fee' } },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      name: 'Tuition Fee',
+      description: 'Standard quarterly academic tuition',
+      isRecurring: true,
+    },
+  });
+
+  const labCat = await prisma.feeCategory.upsert({
+    where: { tenantId_name: { tenantId: tenant.id, name: 'Computer & Science Lab' } },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      name: 'Computer & Science Lab',
+      description: 'Science, robotics and computer terminal maintenance',
+      isRecurring: true,
+    },
+  });
+
+  const sportsCat = await prisma.feeCategory.upsert({
+    where: { tenantId_name: { tenantId: tenant.id, name: 'Annual Sports & Activity' } },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      name: 'Annual Sports & Activity',
+      description: 'Extracurricular physical training and athletic facilities',
+      isRecurring: true,
+    },
+  });
+
+  // Seed Fee Structures for Class 10
+  await prisma.feeStructure.upsert({
+    where: {
+      tenantId_academicYearId_classGradeId_feeCategoryId: {
+        tenantId: tenant.id,
+        academicYearId: academicYear.id,
+        classGradeId: classGrade.id,
+        feeCategoryId: tuitionCat.id,
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      academicYearId: academicYear.id,
+      classGradeId: classGrade.id,
+      feeCategoryId: tuitionCat.id,
+      amount: 15000.0,
+      frequency: 'QUARTERLY',
+    },
+  });
+
+  await prisma.feeStructure.upsert({
+    where: {
+      tenantId_academicYearId_classGradeId_feeCategoryId: {
+        tenantId: tenant.id,
+        academicYearId: academicYear.id,
+        classGradeId: classGrade.id,
+        feeCategoryId: labCat.id,
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      academicYearId: academicYear.id,
+      classGradeId: classGrade.id,
+      feeCategoryId: labCat.id,
+      amount: 2000.0,
+      frequency: 'QUARTERLY',
+    },
+  });
+
+  await prisma.feeStructure.upsert({
+    where: {
+      tenantId_academicYearId_classGradeId_feeCategoryId: {
+        tenantId: tenant.id,
+        academicYearId: academicYear.id,
+        classGradeId: classGrade.id,
+        feeCategoryId: sportsCat.id,
+      },
+    },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      academicYearId: academicYear.id,
+      classGradeId: classGrade.id,
+      feeCategoryId: sportsCat.id,
+      amount: 1500.0,
+      frequency: 'QUARTERLY',
+    },
+  });
+
+  // Seed Fee Invoices & Payment for Rohan Sharma
   if (rohanProfile) {
+    const q1Term = createdFeeTerms[0];
+    const q2Term = createdFeeTerms[1];
+
     let inv1 = await prisma.feeInvoice.findFirst({
       where: { tenantId: tenant.id, invoiceNumber: 'INV-2026-0001' },
     });
     if (!inv1) {
-      await prisma.feeInvoice.create({
+      inv1 = await prisma.feeInvoice.create({
         data: {
           tenantId: tenant.id,
           studentId: rohanProfile.id,
           academicYearId: academicYear.id,
+          feeTermId: q1Term.id,
           invoiceNumber: 'INV-2026-0001',
           totalAmount: 22000.0,
           discountAmount: 0.0,
@@ -705,6 +868,41 @@ async function main() {
           balanceAmount: 0.0,
           dueDate: new Date('2026-05-10'),
           status: InvoiceStatus.PAID,
+          items: {
+            create: [
+              { tenantId: tenant.id, feeCategoryId: tuitionCat.id, amount: 18500.0, description: 'Q1 Tuition Fee' },
+              { tenantId: tenant.id, feeCategoryId: labCat.id, amount: 2000.0, description: 'Q1 Computer Lab Fee' },
+              { tenantId: tenant.id, feeCategoryId: sportsCat.id, amount: 1500.0, description: 'Q1 Activity & Sports' },
+            ],
+          },
+        },
+      });
+    } else if (!inv1.feeTermId) {
+      await prisma.feeInvoice.update({
+        where: { id: inv1.id },
+        data: { feeTermId: q1Term.id },
+      });
+    }
+
+    // Seed official Payment Receipt for INV-2026-0001
+    const accountantUser = await prisma.user.findFirst({
+      where: { tenantId: tenant.id, role: Role.ACCOUNTANT },
+    });
+
+    const existingPayment = await prisma.feePayment.findFirst({
+      where: { tenantId: tenant.id, receiptNumber: 'REC-2026-00001' },
+    });
+    if (!existingPayment) {
+      await prisma.feePayment.create({
+        data: {
+          tenantId: tenant.id,
+          feeInvoiceId: inv1.id,
+          amount: 22000.0,
+          paymentMethod: 'RAZORPAY_UPI',
+          receiptNumber: 'REC-2026-00001',
+          remarks: 'Online portal UPI settlement by parent',
+          collectedById: accountantUser?.id || null,
+          status: 'SUCCESS',
         },
       });
     }
@@ -720,6 +918,7 @@ async function main() {
           tenantId: tenant.id,
           studentId: rohanProfile.id,
           academicYearId: academicYear.id,
+          feeTermId: q2Term.id,
           invoiceNumber: 'INV-2026-0002',
           totalAmount: 18500.0,
           discountAmount: 0.0,
@@ -729,6 +928,86 @@ async function main() {
           balanceAmount: 18500.0,
           dueDate: nextMonth,
           status: InvoiceStatus.PENDING,
+          items: {
+            create: [
+              { tenantId: tenant.id, feeCategoryId: tuitionCat.id, amount: 15000.0, description: 'Q2 Tuition Fee' },
+              { tenantId: tenant.id, feeCategoryId: labCat.id, amount: 2000.0, description: 'Q2 Computer Lab Fee' },
+              { tenantId: tenant.id, feeCategoryId: sportsCat.id, amount: 1500.0, description: 'Q2 Activity Fee' },
+            ],
+          },
+        },
+      });
+    } else if (!inv2.feeTermId) {
+      await prisma.feeInvoice.update({
+        where: { id: inv2.id },
+        data: { feeTermId: q2Term.id },
+      });
+    }
+  }
+
+  // 14. Seed Admission Intake Applications
+  const applicationsToSeed = [
+    {
+      applicationNumber: 'ADM-2026-0001',
+      studentFirstName: 'Aarav',
+      studentLastName: 'Mehta',
+      dateOfBirth: new Date('2011-08-20'),
+      gender: 'MALE',
+      bloodGroup: 'O+',
+      parentName: 'Sunil Mehta',
+      parentPhone: '+91 98111 22334',
+      parentEmail: 'sunil.mehta@example.com',
+      address: 'Pocket B, Sarita Vihar, New Delhi',
+      previousSchool: 'Modern School, Barakhamba',
+      previousMarks: 89.5,
+      status: 'SUBMITTED' as const,
+      isFeePaid: true,
+    },
+    {
+      applicationNumber: 'ADM-2026-0002',
+      studentFirstName: 'Priya',
+      studentLastName: 'Verma',
+      dateOfBirth: new Date('2011-11-04'),
+      gender: 'FEMALE',
+      bloodGroup: 'A+',
+      parentName: 'Anita Verma',
+      parentPhone: '+91 98222 33445',
+      parentEmail: 'anita.verma@example.com',
+      address: 'Flat 12B, Mayur Vihar Phase 1, Delhi',
+      previousSchool: 'Ahlcon Public School',
+      previousMarks: 94.0,
+      status: 'DOCUMENT_VERIFIED' as const,
+      isFeePaid: true,
+    },
+    {
+      applicationNumber: 'ADM-2026-0003',
+      studentFirstName: 'Kabir',
+      studentLastName: 'Joshi',
+      dateOfBirth: new Date('2011-03-12'),
+      gender: 'MALE',
+      bloodGroup: 'B+',
+      parentName: 'Vikram Joshi',
+      parentPhone: '+91 98333 44556',
+      parentEmail: 'vikram.joshi@example.com',
+      address: 'C-45, Hauz Khas Enclave, New Delhi',
+      previousSchool: 'Springdales School, Dhaula Kuan',
+      previousMarks: 91.2,
+      status: 'APPROVED' as const,
+      isFeePaid: true,
+    },
+  ];
+
+  for (const app of applicationsToSeed) {
+    const existingApp = await prisma.admissionApplication.findFirst({
+      where: { tenantId: tenant.id, applicationNumber: app.applicationNumber },
+    });
+    if (!existingApp) {
+      await prisma.admissionApplication.create({
+        data: {
+          tenantId: tenant.id,
+          academicYearId: academicYear.id,
+          classGradeId: classGrade.id,
+          ...app,
         },
       });
     }
