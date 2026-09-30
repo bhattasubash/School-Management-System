@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
+import { redis } from '@/lib/redis';
 import { createSessionToken } from '@/lib/session';
 import type { LoginInput } from '@/lib/validations/auth';
 import type { RoleType, UserSession } from '@/types';
@@ -15,6 +16,10 @@ export interface AuthenticationResult {
 const BCRYPT_SALT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const OTP_TTL_SECONDS = 600; // 10 minutes
+
+// Fallback in-memory store for OTPs if Redis is unavailable
+const memoryOtpStore = new Map<string, { hash: string; expiresAt: number }>();
 
 export class AuthService {
   /**
@@ -33,10 +38,6 @@ export class AuthService {
 
   /**
    * Authenticates a user against tenant-scoped credentials with brute-force lockout protection.
-   *
-   * @param input Credentials { email, password }
-   * @param tenantId Tenant UUID or null (for platform super admin)
-   * @param metadata Client IP / User-Agent for audit log tracking
    */
   static async login(
     input: LoginInput,
@@ -45,17 +46,12 @@ export class AuthService {
   ): Promise<AuthenticationResult> {
     const email = input.email.toLowerCase().trim();
 
-    // 1. Resolve user query:
-    // If tenantId is provided, strictly scope query to that tenant.
-    // If tenantId is null (e.g. localhost development or unified platform login),
-    // first look for platform Super Admin, then discover tenant user by email.
     let user;
     if (tenantId) {
       user = await prisma.user.findFirst({
         where: {
           tenantId,
           email,
-          deletedAt: null,
         },
       });
     } else {
@@ -63,7 +59,6 @@ export class AuthService {
         where: {
           email,
           role: 'SUPER_ADMIN',
-          deletedAt: null,
         },
       });
 
@@ -71,15 +66,12 @@ export class AuthService {
         user = await prisma.user.findFirst({
           where: {
             email,
-            deletedAt: null,
           },
         });
       }
     }
 
-    // Timing-attack prevention & invalid user response
     if (!user) {
-      // Execute a dummy compare to avoid timing side-channels
       await bcrypt.compare(input.password, '$2a$12$e80y6jF3Q8ZpXqFmNfAweOXV4O1t9/4B4/K3/l4l6Wn/z1z1z1z1z');
       return {
         success: false,
@@ -87,15 +79,13 @@ export class AuthService {
       };
     }
 
-    // 2. Account active check
-    if (!user.isActive) {
+    if (!user.isActive || user.deletedAt !== null) {
       return {
         success: false,
         error: 'This account has been deactivated. Please contact your school administrator.',
       };
     }
 
-    // 3. Brute-force lockout verification
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       const remainingMinutes = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
       return {
@@ -104,7 +94,6 @@ export class AuthService {
       };
     }
 
-    // 4. Verify password
     const isPasswordValid = await this.verifyPassword(input.password, user.passwordHash);
 
     if (!isPasswordValid) {
@@ -120,7 +109,6 @@ export class AuthService {
         },
       });
 
-      // Audit log entry for failed attempt
       try {
         await prisma.auditLog.create({
           data: {
@@ -134,9 +122,7 @@ export class AuthService {
             newValues: { failedAttempts, isNowLocked },
           },
         });
-      } catch {
-        // Defensive: never fail login response because audit log write failed
-      }
+      } catch {}
 
       if (isNowLocked) {
         return {
@@ -151,7 +137,6 @@ export class AuthService {
       };
     }
 
-    // 5. Successful login: reset failed attempts, update last login
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -161,7 +146,6 @@ export class AuthService {
       },
     });
 
-    // Audit log entry for successful login
     try {
       await prisma.auditLog.create({
         data: {
@@ -184,9 +168,9 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       avatarUrl: user.avatarUrl,
+      mustChangePassword: user.mustChangePassword,
     };
 
-    // Issue JWT session token
     const token = await createSessionToken({
       sub: user.id,
       tenantId: user.tenantId,
@@ -194,12 +178,220 @@ export class AuthService {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
+      mustChangePassword: user.mustChangePassword,
     });
 
     return {
       success: true,
       user: sessionUser,
       token,
+      mustChangePassword: user.mustChangePassword,
+    };
+  }
+
+  /**
+   * Generates a secure 6-digit OTP for password reset and stores it in Redis (or memory fallback).
+   */
+  static async requestPasswordResetOtp(
+    email: string,
+    tenantId?: string | null
+  ): Promise<{ success: boolean; message: string }> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Verify user exists and is active
+    let user;
+    if (tenantId) {
+      user = await prisma.user.findFirst({
+        where: { tenantId, email: normalizedEmail, deletedAt: null, isActive: true },
+      });
+    } else {
+      user = await prisma.user.findFirst({
+        where: { email: normalizedEmail, deletedAt: null, isActive: true },
+      });
+    }
+
+    // Always return generic success message to prevent user enumeration
+    if (!user) {
+      return {
+        success: true,
+        message: 'If an active account exists with this email, a verification code has been dispatched.',
+      };
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = await bcrypt.hash(otp, 8);
+    const storageKey = `otp:${user.tenantId || 'global'}:${normalizedEmail}`;
+
+    let storedInRedis = false;
+    if (redis) {
+      try {
+        await redis.set(storageKey, otpHash, 'EX', OTP_TTL_SECONDS);
+        storedInRedis = true;
+      } catch (err) {
+        // Fallback to memory
+      }
+    }
+
+    if (!storedInRedis) {
+      memoryOtpStore.set(storageKey, {
+        hash: otpHash,
+        expiresAt: Date.now() + OTP_TTL_SECONDS * 1000,
+      });
+    }
+
+    // Log to console (stub for WhatsApp / SMS gateway dispatch in Phase 15)
+    console.log(`\n======================================================`);
+    console.log(`[AUTH-OTP-DISPATCH] Reset OTP for: ${normalizedEmail}`);
+    console.log(`Code: ${otp} (Valid for 10 minutes)`);
+    console.log(`======================================================\n`);
+
+    return {
+      success: true,
+      message: 'If an active account exists with this email, a verification code has been dispatched.',
+    };
+  }
+
+  /**
+   * Verifies the 6-digit OTP and resets the user's password.
+   */
+  static async verifyOtpAndResetPassword(
+    email: string,
+    otp: string,
+    newPassword: string,
+    tenantId?: string | null
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find user
+    let user;
+    if (tenantId) {
+      user = await prisma.user.findFirst({
+        where: { tenantId, email: normalizedEmail, deletedAt: null, isActive: true },
+      });
+    } else {
+      user = await prisma.user.findFirst({
+        where: { email: normalizedEmail, deletedAt: null, isActive: true },
+      });
+    }
+
+    if (!user) {
+      return { success: false, error: 'Invalid or expired verification request.' };
+    }
+
+    const storageKey = `otp:${user.tenantId || 'global'}:${normalizedEmail}`;
+    let storedHash: string | null = null;
+
+    if (redis) {
+      try {
+        storedHash = await redis.get(storageKey);
+      } catch {
+        // Fallback to memory
+      }
+    }
+
+    if (!storedHash) {
+      const memoryEntry = memoryOtpStore.get(storageKey);
+      if (memoryEntry && memoryEntry.expiresAt > Date.now()) {
+        storedHash = memoryEntry.hash;
+      }
+    }
+
+    if (!storedHash) {
+      return { success: false, error: 'Verification code has expired or is invalid. Please request a new code.' };
+    }
+
+    const isOtpValid = await bcrypt.compare(otp.trim(), storedHash);
+    if (!isOtpValid) {
+      return { success: false, error: 'Incorrect verification code. Please check and try again.' };
+    }
+
+    // Hash new password and update user
+    const newPasswordHash = await this.hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: newPasswordHash,
+        mustChangePassword: false,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    });
+
+    // Invalidate OTP (single-use)
+    if (redis) {
+      try {
+        await redis.del(storageKey);
+      } catch {}
+    }
+    memoryOtpStore.delete(storageKey);
+
+    // Audit log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          tenantId: user.tenantId,
+          userId: user.id,
+          action: 'PASSWORD_RESET_SUCCESS',
+          entityType: 'User',
+          entityId: user.id,
+        },
+      });
+    } catch {}
+
+    return {
+      success: true,
+      message: 'Your password has been successfully reset. You may now sign in with your new credentials.',
+    };
+  }
+
+  /**
+   * Allows an authenticated user to change their password by validating their current password.
+   */
+  static async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.isActive || user.deletedAt) {
+      return { success: false, error: 'User account not found or deactivated.' };
+    }
+
+    const isCurrentValid = await this.verifyPassword(currentPassword, user.passwordHash);
+    if (!isCurrentValid) {
+      return { success: false, error: 'Current password is incorrect.' };
+    }
+
+    const newHash = await this.hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: newHash,
+        mustChangePassword: false,
+      },
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          tenantId: user.tenantId,
+          userId: user.id,
+          action: 'PASSWORD_CHANGE_SUCCESS',
+          entityType: 'User',
+          entityId: user.id,
+        },
+      });
+    } catch {}
+
+    return {
+      success: true,
+      message: 'Password changed successfully.',
     };
   }
 }

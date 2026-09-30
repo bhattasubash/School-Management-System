@@ -111,6 +111,7 @@ export interface JWTPayload {
   email: string;
   firstName?: string;
   lastName?: string;
+  mustChangePassword?: boolean;
   iat?: number;
   exp?: number;
 }
@@ -123,6 +124,7 @@ export interface UserSession {
   firstName: string;
   lastName: string;
   avatarUrl?: string | null;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResult {

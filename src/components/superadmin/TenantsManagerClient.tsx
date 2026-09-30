@@ -97,6 +97,7 @@ export default function TenantsManagerClient({
 
   // Modal & Drawer State
   const [isWizardOpen, setIsWizardOpen] = useState(initialModalOpen);
+  const [tenantToSuspend, setTenantToSuspend] = useState<TenantListItem | null>(null);
   const [selectedTenant, setSelectedTenant] = useState<TenantListItem | null>(
     selectedTenantIdFromUrl
       ? tenants.find((t) => t.id === selectedTenantIdFromUrl) || null
@@ -227,18 +228,18 @@ export default function TenantsManagerClient({
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Header & Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               School Tenants & Campuses
             </h1>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
               {tenants.length} Total
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Provision, inspect, manage domains, and monitor row-level isolation across all onboarded schools.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Manage educational institutions, subscription plans, and custom domain routing.
           </p>
         </div>
 
@@ -248,27 +249,27 @@ export default function TenantsManagerClient({
             setFormError(null);
             setIsWizardOpen(true);
           }}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-2xl shadow-md shadow-purple-600/20 transition-all transform active:scale-95 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors cursor-pointer self-start sm:self-center"
         >
           <Plus className="w-4 h-4" />
-          <span>Provision New School</span>
+          <span>Add School</span>
         </button>
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search by institution name, slug, city, or admin email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-purple-600 transition-colors"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Board Filter */}
           <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
@@ -276,7 +277,7 @@ export default function TenantsManagerClient({
             <select
               value={selectedBoard}
               onChange={(e) => setSelectedBoard(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 font-semibold"
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-purple-600 font-semibold"
             >
               <option value="ALL">All Boards</option>
               <option value="CBSE">CBSE</option>
@@ -293,7 +294,7 @@ export default function TenantsManagerClient({
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 font-semibold"
+              className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-purple-600 font-semibold"
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active</option>
@@ -305,18 +306,18 @@ export default function TenantsManagerClient({
       </div>
 
       {/* Directory Table */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px]">
-                <th className="py-3.5 pl-6">School / Tenant</th>
-                <th className="py-3.5 px-4">Board & Location</th>
-                <th className="py-3.5 px-4">Subscription Plan</th>
-                <th className="py-3.5 px-4">Utilization</th>
-                <th className="py-3.5 px-4">Domains</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 pr-6 text-right">Actions</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold text-xs">
+                <th className="py-3 pl-4">School / Tenant</th>
+                <th className="py-3 px-3">Board & Location</th>
+                <th className="py-3 px-3">Subscription Plan</th>
+                <th className="py-3 px-3">Student Seats</th>
+                <th className="py-3 px-3">Domains</th>
+                <th className="py-3 px-3">Status</th>
+                <th className="py-3 pr-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -324,7 +325,7 @@ export default function TenantsManagerClient({
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
                     <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                    <p className="font-semibold">No school tenants match your criteria.</p>
+                    <p className="font-medium">No school tenants match your criteria.</p>
                   </td>
                 </tr>
               ) : (
@@ -334,94 +335,104 @@ export default function TenantsManagerClient({
                     tenant.domains[0]?.domain ||
                     `${tenant.slug}.schoolerp.in`;
 
+                  const seatPercent = Math.min(
+                    100,
+                    Math.round((tenant.studentCount / (tenant.maxStudents || 1)) * 100)
+                  );
+
                   return (
                     <tr
                       key={tenant.id}
-                      className="hover:bg-slate-50/60 transition-colors group cursor-pointer"
+                      className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
                       onClick={() => setSelectedTenant(tenant)}
                     >
-                      <td className="py-4 pl-6">
+                      <td className="py-3.5 pl-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-xs shrink-0 shadow-xs"
+                            className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-xs"
                             style={{
-                              backgroundColor: tenant.branding?.primaryColor || '#111C2D',
+                              backgroundColor: tenant.branding?.primaryColor || '#0F172A',
                             }}
                           >
                             {tenant.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-extrabold text-slate-900 group-hover:text-purple-600 transition-colors">
+                            <div className="font-bold text-slate-900 group-hover:text-purple-700 transition-colors">
                               {tenant.name}
                             </div>
-                            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                              <span>slug: {tenant.slug}</span>
+                            <div className="text-xs text-slate-400 font-mono">
+                              {tenant.slug}.schoolerp.in
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-4 px-4">
-                        <div className="font-bold text-slate-800">{tenant.board}</div>
-                        <div className="text-[11px] text-slate-400">
+                      <td className="py-3.5 px-3">
+                        <div className="font-semibold text-slate-800">
+                          {tenant.board === 'STATE_BOARD' ? 'State Board' : tenant.board}
+                        </div>
+                        <div className="text-xs text-slate-500">
                           {tenant.city}, {tenant.state}
                         </div>
                       </td>
 
-                      <td className="py-4 px-4">
-                        <span className="inline-block px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 font-bold border border-purple-100 text-[11px]">
+                      <td className="py-3.5 px-3">
+                        <span className="font-semibold text-slate-800">
                           {tenant.subscriptionPlanName}
                         </span>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
+                        <div className="text-xs text-slate-400">
                           ₹{tenant.subscriptionPlanPrice.toLocaleString('en-IN')}/mo
                         </div>
                       </td>
 
-                      <td className="py-4 px-4">
-                        <div className="font-bold text-slate-900">
-                          {tenant.studentCount}{' '}
-                          <span className="text-slate-400 font-normal">
-                            / {tenant.maxStudents}
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-slate-800">
+                            {tenant.studentCount} / {tenant.maxStudents}
+                          </span>
+                          <span className="text-xs text-slate-400 font-normal">
+                            ({seatPercent}%)
                           </span>
                         </div>
                         <div className="w-24 bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
                           <div
-                            className="bg-purple-600 h-1.5 rounded-full"
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                Math.round((tenant.studentCount / (tenant.maxStudents || 1)) * 100)
-                              )}%`,
-                            }}
+                            className={`h-1.5 rounded-full ${
+                              seatPercent >= 95
+                                ? 'bg-red-600'
+                                : seatPercent >= 80
+                                ? 'bg-amber-500'
+                                : 'bg-purple-600'
+                            }`}
+                            style={{ width: `${seatPercent}%` }}
                           />
                         </div>
                       </td>
 
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-1 text-slate-700 font-mono text-[11px]">
-                          <Globe className="w-3 h-3 text-slate-400" />
-                          <span className="truncate max-w-[140px]">{primaryDomain}</span>
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-1 text-slate-700 font-mono text-xs">
+                          <Globe className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[130px]">{primaryDomain}</span>
                         </div>
                         {tenant.domains.some((d) => !d.isVerified) && (
-                          <span className="text-[9px] text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                          <span className="text-xs text-amber-700 font-medium bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
                             DNS Pending
                           </span>
                         )}
                       </td>
 
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-3">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                             tenant.subscriptionStatus === 'ACTIVE'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : 'bg-red-50 text-red-800 border border-red-200'
                           }`}
                         >
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${
                               tenant.subscriptionStatus === 'ACTIVE'
                                 ? 'bg-emerald-500'
-                                : 'bg-rose-500'
+                                : 'bg-red-500'
                             }`}
                           />
                           {tenant.subscriptionStatus}
@@ -429,31 +440,32 @@ export default function TenantsManagerClient({
                       </td>
 
                       <td
-                        className="py-4 pr-6 text-right"
+                        className="py-3.5 pr-4 text-right"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => setSelectedTenant(tenant)}
-                            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-[11px]"
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-colors text-xs"
                           >
                             Inspect
                           </button>
                           <button
-                            onClick={() => handleToggleStatus(tenant)}
+                            onClick={() => {
+                              if (tenant.subscriptionStatus === 'ACTIVE') {
+                                setTenantToSuspend(tenant);
+                              } else {
+                                handleToggleStatus(tenant);
+                              }
+                            }}
                             disabled={isPending}
-                            title={
+                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
                               tenant.subscriptionStatus === 'ACTIVE'
-                                ? 'Suspend School Access'
-                                : 'Reactivate School Access'
-                            }
-                            className={`p-1.5 rounded-xl border transition-colors ${
-                              tenant.subscriptionStatus === 'ACTIVE'
-                                ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 border-slate-200 hover:border-rose-200'
-                                : 'text-emerald-600 hover:bg-emerald-50 border-emerald-200'
+                                ? 'border-slate-200 text-slate-600 hover:text-red-700 hover:border-red-200 hover:bg-red-50'
+                                : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                             }`}
                           >
-                            <Power className="w-4 h-4" />
+                            {tenant.subscriptionStatus === 'ACTIVE' ? 'Suspend' : 'Reactivate'}
                           </button>
                         </div>
                       </td>
@@ -464,7 +476,49 @@ export default function TenantsManagerClient({
             </tbody>
           </table>
         </div>
+
+        <div className="p-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>
+            Showing {filteredTenants.length} of {tenants.length} institutions
+          </span>
+        </div>
       </div>
+
+      {/* Suspend School Confirmation Modal */}
+      {tenantToSuspend && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-2.5 text-red-600">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <h3 className="text-base font-bold text-slate-900">Suspend School Access</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Are you sure you want to suspend access for <strong>{tenantToSuspend.name}</strong>?
+              All enrolled students and associated faculty accounts will temporarily lose access immediately.
+            </p>
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setTenantToSuspend(null)}
+                className="px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  handleToggleStatus(tenantToSuspend);
+                  setTenantToSuspend(null);
+                }}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors cursor-pointer"
+              >
+                {isPending ? 'Suspending...' : 'Confirm Suspension'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Slide-Over Inspection Drawer */}
       {selectedTenant && (

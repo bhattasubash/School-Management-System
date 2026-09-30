@@ -22,7 +22,7 @@ export default async function SuperAdminPage() {
       _count: { id: true },
     }),
     prisma.auditLog.findMany({
-      take: 6,
+      take: 8,
       orderBy: { createdAt: 'desc' },
       include: {
         tenant: { select: { name: true } },
@@ -62,27 +62,73 @@ export default async function SuperAdminPage() {
     count,
   }));
 
+  // Real Exceptions for Needs Attention
+  const nearCapacityTenants = tenants
+    .filter((t) => {
+      const count = studentCountMap.get(t.id) || 0;
+      const max = t.subscriptionPlan?.maxStudents || 1500;
+      return count / max >= 0.85;
+    })
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      ratio: `${studentCountMap.get(t.id) || 0} / ${t.subscriptionPlan?.maxStudents || 1500}`,
+      percent: Math.round(
+        ((studentCountMap.get(t.id) || 0) / (t.subscriptionPlan?.maxStudents || 1500)) * 100
+      ),
+    }));
+
+  const pendingDnsDomains = tenants.flatMap((t) =>
+    t.domains
+      .filter((d) => !d.isVerified)
+      .map((d) => ({
+        tenantName: t.name,
+        domain: d.domain,
+      }))
+  );
+
+  const suspendedTenants = tenants
+    .filter((t) => t.subscriptionStatus === 'SUSPENDED')
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+    }));
+
   const recentTenants = tenants.map((t) => ({
     id: t.id,
     name: t.name,
     slug: t.slug,
     city: t.city,
-    board: t.board,
+    board: t.board === 'STATE_BOARD' ? 'State Board' : t.board,
     status: t.subscriptionStatus,
-    planName: t.subscriptionPlan?.name || 'Default Plan',
+    planName: t.subscriptionPlan?.name || 'Standard Plan',
     studentCount: studentCountMap.get(t.id) || 0,
+    maxStudents: t.subscriptionPlan?.maxStudents || 1500,
+    priceMonthly: Number(t.subscriptionPlan?.priceMonthly || 0),
     createdAt: t.createdAt.toISOString(),
   }));
 
-  const recentAuditLogs = auditLogs.map((log) => ({
-    id: log.id,
-    action: log.action,
-    entityType: log.entityType,
-    entityId: log.entityId,
-    tenantName: log.tenant?.name || null,
-    userEmail: log.user?.email || null,
-    createdAt: log.createdAt.toISOString(),
-  }));
+  // Filter routine USER_LOGIN spam
+  const sensitiveAudit = auditLogs.filter((l) => l.action !== 'USER_LOGIN');
+  const auditLogsToRender = sensitiveAudit.length > 0 ? sensitiveAudit : auditLogs.slice(0, 4);
+
+  const recentAuditLogs = auditLogsToRender.map((log) => {
+    let cleanAction = log.action;
+    if (log.action === 'USER_LOGIN') cleanAction = 'User signed in';
+    else if (log.action === 'PROVISION_TENANT') cleanAction = 'School provisioned';
+    else if (log.action === 'TOGGLE_STATUS') cleanAction = 'Tenant status updated';
+    else if (log.action === 'UPDATE_PLAN') cleanAction = 'Subscription plan updated';
+
+    return {
+      id: log.id,
+      action: cleanAction,
+      entityType: log.entityType,
+      entityId: log.entityId,
+      tenantName: log.tenant?.name || null,
+      userEmail: log.user?.email || null,
+      createdAt: log.createdAt.toISOString(),
+    };
+  });
 
   const stats: SuperAdminDashboardStats = {
     totalTenants,
@@ -92,6 +138,9 @@ export default async function SuperAdminPage() {
     platformMrr,
     platformArr,
     boardDistribution,
+    nearCapacityTenants,
+    pendingDnsDomains,
+    suspendedTenants,
     recentTenants,
     recentAuditLogs,
   };

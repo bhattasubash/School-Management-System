@@ -41,6 +41,7 @@ export async function verifySessionToken(token: string): Promise<JWTPayload | nu
       email: payload.email as string,
       firstName: payload.firstName as string | undefined,
       lastName: payload.lastName as string | undefined,
+      mustChangePassword: Boolean(payload.mustChangePassword),
       iat: payload.iat,
       exp: payload.exp,
     };

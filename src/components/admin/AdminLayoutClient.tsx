@@ -26,7 +26,7 @@ export default function AdminLayoutClient({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F4F8FA] text-[#111C2D] font-sans antialiased selection:bg-[#FF7555]/20 selection:text-[#FF7555]">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans antialiased selection:bg-[#C2410C]/20 selection:text-[#C2410C]">
       {/* Sidebar */}
       <AdminSidebar
         isOpen={sidebarOpen}
@@ -37,7 +37,7 @@ export default function AdminLayoutClient({
       />
 
       {/* Main Content Shell offset by Sidebar on desktop */}
-      <div className="lg:pl-64 md:lg:pl-72 flex flex-col min-h-screen">
+      <div className="lg:pl-72 flex flex-col min-h-screen">
         {/* Global Admin Header */}
         <AdminHeader
           onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
@@ -46,8 +46,8 @@ export default function AdminLayoutClient({
           role={role}
         />
 
-        {/* Dynamic Page Content */}
-        <main className="flex-1 p-4 md:p-8 max-w-[1440px] w-full mx-auto space-y-6">
+        {/* Dynamic Page Content with consistent 24-32px padding */}
+        <main className="flex-1 p-6 md:p-8 max-w-[1440px] w-full mx-auto space-y-6">
           {children}
         </main>
       </div>

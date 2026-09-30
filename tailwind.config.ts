@@ -11,41 +11,55 @@ export default {
     extend: {
       colors: {
         brand: {
-          accent: "#FF856A",              // Primary Coral (#FF856A)
-          coral: "#FF856A",               // Primary Coral
-          coralLight: "#FFF5F2",          // Pale coral tint
-          dark: "#132033",                // Deep Navy Slate (#132033)
-          navy: "#132033",                // Deep Navy
-          canvas: "#FFFFFF",              // Pure White
-          subtle: "#F3F7FA",              // Pale cool blue-grey background (#F3F7FA)
-          muted: "#6F7D8D",               // Secondary neutral text (#6F7D8D)
-          border: "#E6ECF1",              // Thin card border (#E6ECF1)
-          green: "#39C98A",               // Attendance / Success Emerald (#39C98A)
-          cyan: "#35C1E8",                // Decorative corner accent (#35C1E8)
+          DEFAULT: "var(--brand-primary, #C2410C)",
+          primary: "var(--brand-primary, #C2410C)",
+          hover: "var(--brand-primary-hover, #9A3412)",
+          light: "var(--brand-primary-light, #FFEDD5)",
+          text: "var(--brand-primary-text, #FFFFFF)",
+          dark: "var(--brand-dark, #0F172A)",
+          navy: "#0F172A",
+          canvas: "var(--brand-canvas, #FFFFFF)",
+          subtle: "var(--brand-subtle, #F8FAFC)",
+          muted: "var(--brand-muted, #64748B)",
+          border: "var(--brand-border, #E2E8F0)",
+        },
+        platform: {
+          primary: "#4338CA",
+          hover: "#3730A3",
+          light: "#EEF2FF",
         },
         semantic: {
-          success: "#39C98A",             // Emerald Green
-          warning: "#F59E0B",             // Amber
-          border: "#E6ECF1",              // Card borders (#E6ECF1)
+          success: "#16A34A",
+          warning: "#D97706",
+          danger: "#DC2626",
+          info: "#2563EB",
+          border: "#E2E8F0",
         },
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', "Helvetica", "Arial", "sans-serif"],
       },
       borderRadius: {
-        card: "18px",                     // Outer card radius
-        tile: "14px",                     // Inner element radius
+        sm: "6px",
+        DEFAULT: "8px",
+        md: "8px",
+        lg: "8px",
+        xl: "12px",
+        "2xl": "12px",
+        card: "12px",
+        tile: "8px",
       },
       boxShadow: {
-        card: "0 4px 20px -2px rgba(17, 28, 45, 0.05)",
-        "card-hover": "0 10px 25px -4px rgba(17, 28, 45, 0.08)",
+        xs: "0 1px 2px 0 rgba(15, 23, 42, 0.05)",
+        card: "0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.06)",
+        "card-hover": "0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06)",
       },
       fontSize: {
-        display: ["1.5rem", { lineHeight: "2rem", letterSpacing: "-0.02em", fontWeight: "700" }],
-        "section-header": ["1.125rem", { lineHeight: "1.625rem", letterSpacing: "-0.01em", fontWeight: "600" }],
+        display: ["1.75rem", { lineHeight: "2.25rem", letterSpacing: "-0.01em", fontWeight: "700" }],
+        "section-header": ["1.125rem", { lineHeight: "1.5rem", letterSpacing: "0", fontWeight: "600" }],
         "body-primary": ["0.875rem", { lineHeight: "1.25rem", letterSpacing: "0", fontWeight: "500" }],
-        caption: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.01em", fontWeight: "400" }],
-        badge: ["0.6875rem", { lineHeight: "0.875rem", letterSpacing: "0.02em", fontWeight: "600" }],
+        caption: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.01em", fontWeight: "500" }],
+        badge: ["0.75rem", { lineHeight: "1rem", letterSpacing: "0.02em", fontWeight: "600" }],
       },
     },
   },

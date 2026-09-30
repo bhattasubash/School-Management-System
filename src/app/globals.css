@@ -6,12 +6,15 @@
 
 @layer base {
   :root {
+    --brand-primary: #c2410c;
+    --brand-primary-hover: #9a3412;
+    --brand-primary-light: #ffedd5;
+    --brand-primary-text: #ffffff;
     --brand-canvas: #ffffff;
-    --brand-subtle: #f3f7fa;
-    --brand-dark: #132033;
-    --brand-accent: #ff856a;
-    --brand-muted: #6f7d8d;
-    --brand-border: #e6ecf1;
+    --brand-subtle: #f8fafc;
+    --brand-dark: #0f172a;
+    --brand-muted: #64748b;
+    --brand-border: #e2e8f0;
   }
 
   body {
@@ -20,6 +23,8 @@
     color: var(--brand-dark);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    line-height: 1.5;
   }
 }
 

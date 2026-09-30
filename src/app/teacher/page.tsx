@@ -4,18 +4,20 @@ import { redirect } from 'next/navigation';
 import {
   Briefcase,
   LogOut,
-  ArrowRight,
-  ShieldAlert,
-  Users,
-  Calendar,
-  CheckCircle2,
+  CalendarCheck,
   Clock,
+  Users,
+  Megaphone,
+  User,
 } from 'lucide-react';
 import { getSessionFromCookies } from '@/lib/session';
 import { logoutAction } from '@/actions/auth';
 import { AttendanceService } from '@/services/attendance.service';
 import { AttendanceRegister } from '@/components/attendance/AttendanceRegister';
 import { TodayScheduleWidget } from '@/components/attendance/TodayScheduleWidget';
+import TeacherTimetableView, { type WeeklyTeacherPeriod } from '@/components/attendance/TeacherTimetableView';
+import TeacherSelfAttendance from '@/components/attendance/TeacherSelfAttendance';
+import { prisma } from '@/lib/db';
 import { Role } from '@/types';
 
 export default async function TeacherPortalPage() {
@@ -30,91 +32,155 @@ export default async function TeacherPortalPage() {
     redirect('/unauthorized');
   }
 
-  // 1. Fetch Teacher's Assigned Sections
-  const sections = await AttendanceService.getTeacherSections(session.sub, session.tenantId);
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  // 2. Fetch Teacher's Today Schedule and Active Substitutions
-  const { dayOfWeek, schedule, substitutions } = await AttendanceService.getTeacherTodaySchedule(
-    session.sub,
-    session.tenantId,
-    new Date()
-  );
+  // 1. Fetch Teacher's Assigned Sections
+  const [sections, scheduleData, todayAttendance, weeklyEntries] = await Promise.all([
+    AttendanceService.getTeacherSections(session.sub, session.tenantId),
+    AttendanceService.getTeacherTodaySchedule(session.sub, session.tenantId, today),
+    prisma.staffAttendance.findFirst({
+      where: {
+        tenantId: session.tenantId,
+        userId: session.sub,
+        date: todayStart,
+      },
+    }),
+    prisma.timetableEntry.findMany({
+      where: {
+        tenantId: session.tenantId,
+        teacher: { userId: session.sub },
+      },
+      include: {
+        section: { include: { classGrade: true } },
+        periodTimeSlot: true,
+        subject: true,
+      },
+      orderBy: { periodTimeSlot: { order: 'asc' } },
+    }),
+  ]);
+
+  const { dayOfWeek, schedule, substitutions } = scheduleData;
+
+  const weeklySchedule: WeeklyTeacherPeriod[] = weeklyEntries.map((e) => ({
+    id: e.id,
+    dayOfWeek: e.dayOfWeek,
+    periodName: e.periodTimeSlot.name,
+    startTime: e.periodTimeSlot.startTime,
+    endTime: e.periodTimeSlot.endTime,
+    order: e.periodTimeSlot.order,
+    isBreak: e.periodTimeSlot.isBreak,
+    className: e.section.classGrade.name,
+    sectionName: e.section.name,
+    subjectName: e.subject?.name || 'Class',
+    subjectCode: e.subject?.code || '',
+    roomNumber: e.roomNumber,
+  }));
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] text-[#111C2D]">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans antialiased">
       {/* ==================================================================== */}
-      {/* 1. TOP INSTITUTIONAL NAVIGATION                                     */}
+      {/* 1. TOP FACULTY PORTAL NAVIGATION HEADER                              */}
       {/* ==================================================================== */}
-      <header className="sticky top-0 z-40 bg-[#111C2D] text-white border-b border-gray-800 px-6 py-4 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FA896B] flex items-center justify-center text-white shadow-xs">
-            <Briefcase className="w-5 h-5" />
+      <header className="sticky top-0 z-40 bg-[#0F172A] text-white border-b border-slate-800 shadow-xs">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#C2410C] flex items-center justify-center text-white shadow-xs font-bold text-sm">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold leading-none text-white">
+                Faculty Workspace
+              </h1>
+              <p className="text-xs text-slate-400 mt-1">
+                Class Attendance & Daily Schedule
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-bold leading-none">
-              Delhi Public School • Faculty Portal
-            </h1>
-            <p className="text-xs text-gray-400 mt-1">
-              Class Attendance & Timetable Management • Academic Session 2026-27
-            </p>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex flex-col text-right">
+              <span className="text-xs font-semibold leading-none text-white">
+                {session.firstName} {session.lastName}
+              </span>
+              <span className="text-xs text-slate-400 mt-0.5">
+                Faculty Member
+              </span>
+            </div>
+
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </form>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex flex-col text-right">
-            <span className="text-xs font-bold leading-none">
-              {session.firstName} {session.lastName}
-            </span>
-            <span className="text-[10px] text-emerald-400 mt-0.5">
-              Senior Secondary Faculty
-            </span>
-          </div>
-
-          <span className="text-xs bg-[#26C281]/20 text-[#26C281] border border-[#26C281]/30 px-2.5 py-1 rounded-full font-bold">
-            Role: Teacher
-          </span>
-
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+        {/* Persistent Sub-Navigation Tabs */}
+        <div className="border-t border-slate-800 bg-[#0B1324]">
+          <div className="max-w-7xl mx-auto px-6 flex items-center gap-6 overflow-x-auto text-xs">
+            <Link
+              href="/teacher"
+              className="py-3 font-semibold text-white border-b-2 border-[#C2410C] flex items-center gap-2 whitespace-nowrap"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign Out
-            </button>
-          </form>
+              <CalendarCheck className="w-3.5 h-3.5 text-[#C2410C]" />
+              <span>Daily Attendance</span>
+            </Link>
+
+            <Link
+              href="#schedule"
+              className="py-3 font-medium text-slate-400 hover:text-slate-200 border-b-2 border-transparent flex items-center gap-2 whitespace-nowrap transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Class Timetable</span>
+            </Link>
+
+            <Link
+              href="/admin/students"
+              className="py-3 font-medium text-slate-400 hover:text-slate-200 border-b-2 border-transparent flex items-center gap-2 whitespace-nowrap transition-colors"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Student Roster</span>
+            </Link>
+
+            <Link
+              href="/admin/notices"
+              className="py-3 font-medium text-slate-400 hover:text-slate-200 border-b-2 border-transparent flex items-center gap-2 whitespace-nowrap transition-colors"
+            >
+              <Megaphone className="w-3.5 h-3.5" />
+              <span>Circulars</span>
+            </Link>
+          </div>
         </div>
       </header>
 
       {/* ==================================================================== */}
       {/* 2. MAIN TEACHER WORKSPACE                                            */}
       {/* ==================================================================== */}
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
-        {/* Welcome & Overview Header */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <main className="max-w-7xl mx-auto p-6 md:p-8 space-y-6">
+        {/* Clean Page Title Strip */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200/80">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#26C281]">
-              Daily Operations Active
-            </span>
-            <h2 className="text-2xl font-black text-[#111C2D] mt-1">
-              Welcome back, {session.firstName || 'Teacher'}
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              Class Attendance Register
             </h2>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">
-              Class Teacher for Class 10-A • Sub-30-Second Morning Attendance & Period Timetable
+            <p className="text-xs text-slate-500 mt-0.5">
+              Welcome back, {session.firstName || 'Teacher'}. Record morning attendance for your assigned sections.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[#111C2D] bg-[#F4F6F9] hover:bg-gray-200 px-4 py-2.5 rounded-xl transition-all"
-            >
-              Student Portal View <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+              {sections.length} Section{sections.length > 1 ? 's' : ''} Assigned
+            </span>
           </div>
         </div>
 
-        {/* Two-Column Responsive Layout: Left Attendance Register (60%), Right Schedule & Substitution Widget (40%) */}
+        {/* Two-Column Responsive Layout: Register (60%), Schedule & Substitution (40%) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Column: Interactive Attendance Register */}
           <div className="lg:col-span-7 xl:col-span-8">
@@ -124,12 +190,23 @@ export default async function TeacherPortalPage() {
             />
           </div>
 
-          {/* Right Column: Schedule & Substitution Alert Widget */}
-          <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+          {/* Right Column: Self-Attendance, Schedule & Substitution Alert Widget */}
+          <div id="schedule" className="lg:col-span-5 xl:col-span-4 space-y-6">
+            <TeacherSelfAttendance
+              initialCheckInTime={todayAttendance?.checkInTime?.toISOString()}
+              initialCheckOutTime={todayAttendance?.checkOutTime?.toISOString()}
+            />
+
             <TodayScheduleWidget
               dayOfWeek={dayOfWeek}
               schedule={schedule}
               substitutions={substitutions}
+            />
+
+            <TeacherTimetableView
+              todayDayOfWeek={dayOfWeek}
+              todaySchedule={schedule}
+              weeklySchedule={weeklySchedule}
             />
           </div>
         </div>

@@ -18,9 +18,19 @@ export const ForgotPasswordSchema = z
 
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 
+export const VerifyOtpSchema = z
+  .object({
+    email: z.string().email('Please enter a valid email address'),
+    otp: z.string().length(6, 'OTP must be exactly 6 digits'),
+  })
+  .strict();
+
+export type VerifyOtpInput = z.infer<typeof VerifyOtpSchema>;
+
 export const ResetPasswordSchema = z
   .object({
-    token: z.string().min(1, 'Reset token is required'),
+    email: z.string().email('Please enter a valid email address'),
+    otp: z.string().length(6, 'OTP must be exactly 6 digits'),
     newPassword: z
       .string()
       .min(8, 'Password must be at least 8 characters long')
@@ -28,8 +38,12 @@ export const ResetPasswordSchema = z
       .regex(/[a-z]/, 'Must contain at least one lowercase letter')
       .regex(/[0-9]/, 'Must contain at least one number')
       .regex(/[^A-Za-z0-9]/, 'Must contain at least one special character'),
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
   })
-  .strict();
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 
@@ -43,7 +57,11 @@ export const ChangePasswordSchema = z
       .regex(/[a-z]/, 'Must contain at least one lowercase letter')
       .regex(/[0-9]/, 'Must contain at least one number')
       .regex(/[^A-Za-z0-9]/, 'Must contain at least one special character'),
+    confirmPassword: z.string().min(1, 'Please confirm your new password'),
   })
-  .strict();
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

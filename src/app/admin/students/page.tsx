@@ -122,6 +122,9 @@ export default async function AdminStudentsPage() {
       address: s.address,
       emergencyContact: s.emergencyContact,
       attendancePercentage,
+      isActive: s.user.isActive,
+      deletedAt: s.user.deletedAt ? s.user.deletedAt.toISOString() : null,
+      sectionId: s.sectionId,
       feeStatus: {
         totalInvoiced,
         totalPaid,
@@ -132,5 +135,16 @@ export default async function AdminStudentsPage() {
     };
   });
 
-  return <StudentDirectoryClient students={students} classList={classList} />;
+  const sectionOptions = sectionsRaw.map((s) => ({
+    id: s.id,
+    name: `${s.classGrade.name}-${s.name}`,
+  }));
+
+  return (
+    <StudentDirectoryClient
+      students={students}
+      classList={classList}
+      sections={sectionOptions}
+    />
+  );
 }

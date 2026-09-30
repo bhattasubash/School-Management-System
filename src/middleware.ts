@@ -14,6 +14,7 @@ interface TokenPayload {
   tenantId: string | null;
   role: string;
   email: string;
+  mustChangePassword?: boolean;
 }
 
 async function verifyToken(token: string): Promise<TokenPayload | null> {
@@ -25,6 +26,7 @@ async function verifyToken(token: string): Promise<TokenPayload | null> {
       tenantId: (payload.tenantId as string) || null,
       role: payload.role as string,
       email: payload.email as string,
+      mustChangePassword: Boolean(payload.mustChangePassword),
     };
   } catch {
     return null;
@@ -80,11 +82,21 @@ export async function middleware(request: NextRequest) {
 
   // 3. Route Authorization Guard
   const isLoginPage = pathname === '/login';
+  const isForgotPasswordPage = pathname.startsWith('/login/forgot-password');
+  const isChangePasswordPage = pathname === '/change-password';
   const isUnauthorizedPage = pathname === '/unauthorized';
   const isAuthApi = pathname.startsWith('/api/auth');
 
+  // If user must change password, force redirect to /change-password
+  if (session && session.mustChangePassword && !isChangePasswordPage && !isLoginPage && !isForgotPasswordPage && !pathname.startsWith('/api/')) {
+    return NextResponse.redirect(new URL('/change-password', request.url));
+  }
+
   // If already logged in and visiting /login, redirect to their home portal
   if (isLoginPage && session) {
+    if (session.mustChangePassword) {
+      return NextResponse.redirect(new URL('/change-password', request.url));
+    }
     let target = '/';
     if (session.role === 'ADMIN') target = '/admin';
     else if (session.role === 'TEACHER') target = '/teacher';

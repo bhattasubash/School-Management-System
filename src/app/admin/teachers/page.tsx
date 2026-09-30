@@ -80,6 +80,8 @@ export default async function AdminTeachersPage() {
         month: 'short',
         year: 'numeric',
       }),
+      isActive: t.user.isActive,
+      deletedAt: t.user.deletedAt ? t.user.deletedAt.toISOString() : null,
       classTeacherSection: classTeacherSectionMap.get(t.id) || null,
       activeSubstitution: activeSub
         ? {

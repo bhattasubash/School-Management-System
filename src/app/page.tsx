@@ -9,7 +9,6 @@ import StudentParentDashboardClient, {
 
 export const dynamic = 'force-dynamic';
 
-
 interface PageProps {
   searchParams?: {
     child?: string;
@@ -136,10 +135,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   if (!targetStudent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4F8FA] p-6 text-center">
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-md">
-          <h2 className="text-xl font-bold text-[#132033]">Student Profile Not Found</h2>
-          <p className="text-sm text-gray-500 mt-2">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="bg-white p-8 rounded-xl shadow-xs border border-slate-200 max-w-md">
+          <h2 className="text-xl font-bold text-slate-900">Student Profile Not Found</h2>
+          <p className="text-sm text-slate-500 mt-2">
             No enrolled student profile is associated with this account. Please contact your school administrator.
           </p>
         </div>
@@ -156,13 +155,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     orderBy: { date: 'desc' },
   });
 
-  const totalClasses = Math.max(attendanceRecords.length, 1);
-  const presentClasses = attendanceRecords.filter((r) => r.status === 'PRESENT').length;
-  const lateClasses = attendanceRecords.filter((r) => r.status === 'LATE').length;
+  const totalClasses = attendanceRecords.length > 0 ? attendanceRecords.length : 15;
+  const presentClasses =
+    attendanceRecords.length > 0
+      ? attendanceRecords.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length
+      : 14;
   const attendancePercentage =
     attendanceRecords.length > 0
-      ? Math.round(((presentClasses + lateClasses) / totalClasses) * 1000) / 10
-      : 94.8;
+      ? Math.round((presentClasses / totalClasses) * 1000) / 10
+      : 93.3; // 14 / 15 = 93.3% exact
 
   // 5. Query live Fee Invoices
   const feeInvoices = await prisma.feeInvoice.findMany({
@@ -178,11 +179,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const upcomingInvoice = feeInvoices.find((inv) => Number(inv.balanceAmount) > 0);
   const isOverdue = upcomingInvoice ? new Date(upcomingInvoice.dueDate) < new Date() : false;
   const nextDueDate = upcomingInvoice
-    ? `Q2 Due: ${new Date(upcomingInvoice.dueDate).toLocaleDateString('en-IN', {
+    ? `Due: ${new Date(upcomingInvoice.dueDate).toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
+        year: 'numeric',
       })}`
-    : 'Nil Due';
+    : 'No Outstanding Due';
   const statusText = pendingAmount === 0 ? 'Paid' : isOverdue ? 'Overdue' : 'Pending';
 
   // 6. Query live Exam Results & Subjects
@@ -206,11 +208,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   });
 
   const fallbackSubjects = [
-    { code: 'MATH-041', name: 'MATHEMATICS (ALGEBRA)', defaultMarks: 92 },
-    { code: 'SCI-086', name: 'SCIENCE & LAB WORK', defaultMarks: 86 },
-    { code: 'ENG-184', name: 'ENGLISH LANGUAGE & LIT.', defaultMarks: 95 },
-    { code: 'SOC-087', name: 'SOCIAL SCIENCE', defaultMarks: 78 },
-    { code: 'HIN-002', name: 'HINDI COURSE A', defaultMarks: 71 },
+    { code: 'MATH-041', name: 'Mathematics (Algebra)', defaultMarks: 92 },
+    { code: 'SCI-086', name: 'Science & Lab Work', defaultMarks: 86 },
+    { code: 'ENG-184', name: 'English Language & Lit.', defaultMarks: 95 },
+    { code: 'SOC-087', name: 'Social Science', defaultMarks: 78 },
+    { code: 'HIN-002', name: 'Hindi Course A', defaultMarks: 71 },
   ];
 
   const subjects =
@@ -222,7 +224,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           const fb = fallbackSubjects.find((f) => f.code === sub.code);
           return {
             code: sub.code,
-            name: sub.name.toUpperCase(),
+            name: sub.name,
             percent: match ? Number(match.marksObtained) : fb ? fb.defaultMarks : 85,
           };
         })
@@ -291,19 +293,19 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       ? timetableEntries.map((te) => {
           const sub = te.substitutions[0];
           const teacherName = sub
-            ? `Dr. ${sub.substituteTeacher.user.firstName} ${sub.substituteTeacher.user.lastName}`
+            ? `${sub.substituteTeacher.user.firstName} ${sub.substituteTeacher.user.lastName}`
             : te.teacher
-            ? `Dr. ${te.teacher.user.firstName} ${te.teacher.user.lastName}`
+            ? `${te.teacher.user.firstName} ${te.teacher.user.lastName}`
             : 'Assigned Teacher';
 
           return {
             type: te.periodTimeSlot.name.includes('Lab') ? 'Practical' : 'Lecture',
             subject: te.subject?.name || 'Academic Class',
             code: te.subject?.code || 'GEN-101',
-            room: 'Room 204',
+            room: te.roomNumber ? `Room ${te.roomNumber}` : 'Room 204',
             section: `${targetStudent.section.classGrade.name}-${targetStudent.section.name}`,
             teacher: teacherName,
-            time: `${te.periodTimeSlot.startTime}-${te.periodTimeSlot.endTime}`,
+            time: `${te.periodTimeSlot.startTime} - ${te.periodTimeSlot.endTime}`,
             isSubstitute: !!sub,
           };
         })
@@ -314,8 +316,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             code: 'MATH-041',
             room: 'Room 204',
             section: `${targetStudent.section.classGrade.name}-${targetStudent.section.name}`,
-            teacher: 'Dr. Anandita Sen',
-            time: '08:30-09:15 AM',
+            teacher: 'Mrs. Shalini Roy',
+            time: '08:30 - 09:15 AM',
+            isSubstitute: false,
           },
           {
             type: 'Practical',
@@ -323,9 +326,39 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             code: 'SCI-086',
             room: 'Physics Lab 2',
             section: `${targetStudent.section.classGrade.name}-${targetStudent.section.name}`,
-            teacher: 'Dr. Anandita Sen',
-            time: '09:15-10:00 AM',
+            teacher: 'Dr. Rajesh Nambiar',
+            time: '09:15 - 10:00 AM',
             isSubstitute: true,
+          },
+          {
+            type: 'Lecture',
+            subject: 'English Language & Literature',
+            code: 'ENG-184',
+            room: 'Room 204',
+            section: `${targetStudent.section.classGrade.name}-${targetStudent.section.name}`,
+            teacher: 'Mr. Arvind Saxena',
+            time: '10:15 - 11:00 AM',
+            isSubstitute: false,
+          },
+          {
+            type: 'Lecture',
+            subject: 'Social Science (History & Civics)',
+            code: 'SOC-087',
+            room: 'Room 204',
+            section: `${targetStudent.section.classGrade.name}-${targetStudent.section.name}`,
+            teacher: 'Mrs. Meenakshi Joshi',
+            time: '11:00 - 11:45 AM',
+            isSubstitute: false,
+          },
+          {
+            type: 'Lecture',
+            subject: 'Computer Applications',
+            code: 'CA-165',
+            room: 'Computer Lab 1',
+            section: `${targetStudent.section.classGrade.name}-${targetStudent.section.name}`,
+            teacher: 'Mr. Deepak Sharma',
+            time: '12:15 - 01:00 PM',
+            isSubstitute: false,
           },
         ];
 
@@ -352,7 +385,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
           return {
             id: n.id,
-            title: `${n.title} ( DPS/${category.substring(0, 4).toUpperCase()}/2026 )`,
+            title: n.title,
             date: n.publishedAt.toLocaleDateString('en-IN', {
               day: 'numeric',
               month: 'short',
@@ -365,28 +398,42 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       : [
           {
             id: '1',
-            title: 'CBSE Class 10 Pre-Board Examination Schedule Released ( DPS/ACAD/2026/089 )',
+            title: 'CBSE Class 10 Pre-Board Examination Schedule & Guidelines Released',
             date: '22 Sept 2026',
-            category: 'Academic',
+            category: 'Examination',
             priority: 'IMPORTANT',
           },
           {
             id: '2',
-            title: 'Inter-School Science & Mathematics Olympiad 2026-27 Registrations Open ( DPS/OLY/2026/042 )',
-            date: '22 Sept 2026',
+            title: 'Inter-School Science & Mathematics Olympiad 2026-27 Registrations Open',
+            date: '20 Sept 2026',
+            category: 'Co-Curricular',
+            priority: 'NORMAL',
+          },
+          {
+            id: '3',
+            title: 'Parent-Teacher Meeting (Term 1 Assessment Review) on Saturday',
+            date: '18 Sept 2026',
+            category: 'Administrative',
+            priority: 'IMPORTANT',
+          },
+          {
+            id: '4',
+            title: 'Annual Sports Day Selection Trials for Middle & Senior Wings',
+            date: '15 Sept 2026',
             category: 'Co-Curricular',
             priority: 'NORMAL',
           },
         ];
 
-  // 9. Faculty authorities
+  // 9. Institutional Authorities / Faculty Directory
   const faculty = [
     {
       roleBadge: 'Head of Institution',
       name: 'Dr. Anandita Sen',
       designation: 'Principal',
       department: 'Senior Wing & General Administration',
-      email: 'principal@dpsdelhi.edu.in',
+      email: 'principal@dps.edu.in',
       phone: '+91 11 2345 6789',
     },
     {
@@ -394,23 +441,23 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       name: 'Mr. Arvind Saxena',
       designation: 'Vice Principal',
       department: 'Curriculum & Examination Affairs',
-      email: 'viceprincipal@dpsdelhi.edu.in',
+      email: 'viceprincipal@dps.edu.in',
       phone: '+91 11 2345 6790',
     },
     {
-      roleBadge: `${targetStudent.section.classGrade.name}-${targetStudent.section.name} Mentor`,
-      name: 'Dr. Anandita Sen',
-      designation: `Class Teacher & PGT Mathematics`,
+      roleBadge: `${targetStudent.section.classGrade.name}-${targetStudent.section.name} Class Mentor`,
+      name: 'Mrs. Shalini Roy',
+      designation: 'Class Teacher & PGT Mathematics',
       department: 'Department of Mathematics',
-      email: 'anandita.sen@dps.edu.in',
+      email: 'shalini.roy@dps.edu.in',
       phone: '+91 98112 34567',
     },
     {
-      roleBadge: 'Grievance Officer',
+      roleBadge: 'Student Welfare & Grievance',
       name: 'Dr. Rajesh Nambiar',
       designation: 'HOD Science & Student Counsellor',
       department: 'Department of Sciences',
-      email: 'colleague.teacher@dps.edu.in',
+      email: 'rajesh.nambiar@dps.edu.in',
       phone: '+91 98223 45678',
     },
   ];
