@@ -108,9 +108,13 @@ export async function updatePeriodTimeSlotAction(rawInput: UpdatePeriodTimeSlotI
       return { success: false as const, error: 'Time slot not found.' };
     }
 
-    const updated = await prisma.periodTimeSlot.update({
-      where: { id },
+    await prisma.periodTimeSlot.updateMany({
+      where: { id, tenantId: context.tenantId },
       data,
+    });
+
+    const updated = await prisma.periodTimeSlot.findFirst({
+      where: { id, tenantId: context.tenantId },
     });
 
     revalidatePath('/admin/timetable');
@@ -139,8 +143,8 @@ export async function deletePeriodTimeSlotAction(slotId: string) {
       return { success: false as const, error: 'Time slot not found.' };
     }
 
-    await prisma.periodTimeSlot.delete({
-      where: { id: slotId },
+    await prisma.periodTimeSlot.deleteMany({
+      where: { id: slotId, tenantId: context.tenantId },
     });
 
     revalidatePath('/admin/timetable');
@@ -217,6 +221,53 @@ export async function saveTimetableEntryAction(rawInput: SaveTimetableEntryInput
   const { context } = guard;
   try {
     const data = validation.data;
+    const tenantId = context.tenantId;
+
+    // Verify section belongs to this tenant
+    const section = await prisma.section.findFirst({
+      where: { id: data.sectionId, tenantId },
+    });
+    if (!section) {
+      return { success: false as const, error: 'Section not found in your school.' };
+    }
+
+    // Verify time slot belongs to this tenant
+    const slot = await prisma.periodTimeSlot.findFirst({
+      where: { id: data.periodTimeSlotId, tenantId },
+    });
+    if (!slot) {
+      return { success: false as const, error: 'Time slot not found in your school.' };
+    }
+
+    // Verify subject belongs to this tenant if provided
+    if (data.subjectId) {
+      const subject = await prisma.subject.findFirst({
+        where: { id: data.subjectId, tenantId },
+      });
+      if (!subject) {
+        return { success: false as const, error: 'Subject not found in your school.' };
+      }
+    }
+
+    // Verify teacher belongs to this tenant if provided
+    if (data.teacherId) {
+      const teacher = await prisma.teacherProfile.findFirst({
+        where: { id: data.teacherId, tenantId },
+      });
+      if (!teacher) {
+        return { success: false as const, error: 'Teacher not found in your school.' };
+      }
+    }
+
+    // If updating existing entry, verify it belongs to this tenant
+    if (data.entryId) {
+      const existingEntry = await prisma.timetableEntry.findFirst({
+        where: { id: data.entryId, tenantId },
+      });
+      if (!existingEntry) {
+        return { success: false as const, error: 'Timetable entry not found in your school.' };
+      }
+    }
 
     // Run conflict check via service
     const conflictResult = await validateTimetableSlotConflict(context.tenantId, {
@@ -347,6 +398,23 @@ export async function cloneTimetableAction(rawInput: CloneTimetableInput) {
   try {
     const { fromSectionId, toSectionId } = validation.data;
 
+    // Verify both source and target sections belong to this tenant
+    const [fromSection, toSection] = await Promise.all([
+      prisma.section.findFirst({
+        where: { id: fromSectionId, tenantId: context.tenantId },
+      }),
+      prisma.section.findFirst({
+        where: { id: toSectionId, tenantId: context.tenantId },
+      }),
+    ]);
+
+    if (!fromSection) {
+      return { success: false as const, error: 'Source section not found in your school.' };
+    }
+    if (!toSection) {
+      return { success: false as const, error: 'Target section not found in your school.' };
+    }
+
     const sourceEntries = await prisma.timetableEntry.findMany({
       where: { tenantId: context.tenantId, sectionId: fromSectionId },
     });
@@ -447,8 +515,18 @@ export async function getSubjectsForSectionAction(sectionId: string) {
 
   const { context } = guard;
   try {
+    // Verify section belongs to caller's tenant
+    const verifiedSection = await prisma.section.findFirst({
+      where: { id: sectionId, tenantId: context.tenantId },
+      select: { classGradeId: true },
+    });
+
+    if (!verifiedSection) {
+      return { success: false as const, error: 'Section not found in your school.' };
+    }
+
     const cst = await prisma.classSubjectTeacher.findMany({
-      where: { sectionId },
+      where: { sectionId, tenantId: context.tenantId },
       include: {
         subject: { select: { id: true, name: true, code: true } },
         teacher: {
@@ -480,19 +558,12 @@ export async function getSubjectsForSectionAction(sectionId: string) {
     }
 
     if (subjectMap.size === 0) {
-      const section = await prisma.section.findUnique({
-        where: { id: sectionId },
-        select: { classGradeId: true },
+      const allSubjects = await prisma.subject.findMany({
+        where: { tenantId: context.tenantId },
+        select: { id: true, name: true, code: true },
       });
-
-      if (section) {
-        const allSubjects = await prisma.subject.findMany({
-          where: { tenantId: context.tenantId },
-          select: { id: true, name: true, code: true },
-        });
-        for (const sub of allSubjects) {
-          subjectMap.set(sub.id, sub);
-        }
+      for (const sub of allSubjects) {
+        subjectMap.set(sub.id, sub);
       }
 
       const allTeachers = await prisma.teacherProfile.findMany({

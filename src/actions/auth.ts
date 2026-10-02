@@ -20,6 +20,8 @@ import {
   type ResetPasswordInput,
   type ChangePasswordInput,
 } from '@/lib/validations/auth';
+import { revokeAllUserSessions } from '@/lib/session-revocation';
+import { resolveTenantByHostname } from '@/lib/tenant';
 import type { AuthResult } from '@/types';
 
 /**
@@ -39,15 +41,22 @@ export async function loginAction(input: LoginInput): Promise<AuthResult> {
 
   const credentials = validationResult.data;
 
-  // 2. Resolve Tenant Context server-side from request headers
+  // 2. Resolve Tenant Context server-side from request headers or verified host
   const headerList = headers();
   const headerTenantId = headerList.get('x-tenant-id');
   const isSuperAdminDomain = headerList.get('x-is-superadmin-domain') === 'true';
   const ipAddress = headerList.get('x-forwarded-for')?.split(',')[0].trim() || headerList.get('x-real-ip') || undefined;
   const userAgent = headerList.get('user-agent') || undefined;
 
-  // Allow explicit tenantId from credentials if provided (e.g. testing/multi-tenant switcher), otherwise use header context
-  const resolvedTenantId = credentials.tenantId || headerTenantId || (isSuperAdminDomain ? null : null);
+  const rawHost = headerList.get('host') || '';
+  let resolvedTenantId = credentials.tenantId || headerTenantId || null;
+
+  if (!resolvedTenantId && !isSuperAdminDomain && rawHost) {
+    const tenantContext = await resolveTenantByHostname(rawHost);
+    if (tenantContext) {
+      resolvedTenantId = tenantContext.tenantId;
+    }
+  }
 
   // 3. Authenticate with AuthService
   const result = await AuthService.login(credentials, resolvedTenantId, { ipAddress, userAgent });
@@ -71,8 +80,6 @@ export async function loginAction(input: LoginInput): Promise<AuthResult> {
     redirectUrl,
   };
 }
-
-import { revokeAllUserSessions } from '@/lib/session-revocation';
 
 /**
  * Server Action to sign out current user by revoking all sessions, purging the session cookie and redirecting to /login.
@@ -109,7 +116,14 @@ export async function forgotPasswordAction(
   }
 
   const headerList = headers();
-  const tenantId = headerList.get('x-tenant-id');
+  let tenantId = headerList.get('x-tenant-id');
+  if (!tenantId) {
+    const rawHost = headerList.get('host') || '';
+    if (rawHost) {
+      const ctx = await resolveTenantByHostname(rawHost);
+      tenantId = ctx?.tenantId || null;
+    }
+  }
 
   return AuthService.requestPasswordResetOtp(validation.data.email, tenantId);
 }
@@ -129,7 +143,14 @@ export async function verifyOtpAndResetAction(
   }
 
   const headerList = headers();
-  const tenantId = headerList.get('x-tenant-id');
+  let tenantId = headerList.get('x-tenant-id');
+  if (!tenantId) {
+    const rawHost = headerList.get('host') || '';
+    if (rawHost) {
+      const ctx = await resolveTenantByHostname(rawHost);
+      tenantId = ctx?.tenantId || null;
+    }
+  }
 
   return AuthService.verifyOtpAndResetPassword(
     validation.data.email,

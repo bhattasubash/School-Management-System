@@ -230,9 +230,9 @@ export async function transferStudentSectionAction(rawInput: TransferStudentSect
     const previousSectionName = `${student.section.classGrade.name}-${student.section.name}`;
     const newSectionName = `${targetSection.classGrade.name}-${targetSection.name}`;
 
-    // 3. Atomically update section assignment
-    await prisma.studentProfile.update({
-      where: { id: studentProfileId },
+    // 3. Atomically update section assignment with strict tenant scoping
+    await prisma.studentProfile.updateMany({
+      where: { id: studentProfileId, tenantId: context.tenantId },
       data: { sectionId: targetSectionId },
     });
 

@@ -155,8 +155,8 @@ export async function updateEventAction(rawInput: UpdateEventInput) {
     const wasUnpublished = !existing.isPublished;
     const isNowPublished = input.isPublished === true;
 
-    const updated = await prisma.event.update({
-      where: { id: input.id },
+    await prisma.event.updateMany({
+      where: { id: input.id, tenantId },
       data: {
         ...(input.title !== undefined && { title: input.title }),
         ...(input.description !== undefined && { description: input.description }),
@@ -170,6 +170,14 @@ export async function updateEventAction(rawInput: UpdateEventInput) {
         ...(input.isPublished !== undefined && { isPublished: input.isPublished }),
       },
     });
+
+    const updated = await prisma.event.findFirst({
+      where: { id: input.id, tenantId },
+    });
+
+    if (!updated) {
+      return { success: false, error: 'Event update failed.' };
+    }
 
     // Auto-generate notification if state transitioned from draft -> published
     if (wasUnpublished && isNowPublished) {
@@ -224,10 +232,18 @@ export async function togglePublishEventAction(id: string, isPublished: boolean)
       return { success: false, error: 'Event not found.' };
     }
 
-    const updated = await prisma.event.update({
-      where: { id },
+    await prisma.event.updateMany({
+      where: { id, tenantId },
       data: { isPublished },
     });
+
+    const updated = await prisma.event.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!updated) {
+      return { success: false, error: 'Event update failed.' };
+    }
 
     // Auto-generate notification on publish
     if (isPublished && !existing.isPublished) {
@@ -282,9 +298,13 @@ export async function deleteEventAction(id: string) {
       return { success: false, error: 'Event not found.' };
     }
 
-    await prisma.event.delete({
-      where: { id },
+    const result = await prisma.event.deleteMany({
+      where: { id, tenantId },
     });
+
+    if (result.count === 0) {
+      return { success: false, error: 'Event not found.' };
+    }
 
     // Audit log
     await prisma.auditLog.create({

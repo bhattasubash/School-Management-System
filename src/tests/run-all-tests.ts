@@ -45,6 +45,7 @@ const testSuites = [
   'src/tests/verify-admin-academics-notices.ts',
   'src/tests/verify-superadmin.ts',
   'src/tests/verify-phase-1a.ts',
+  'src/tests/verify-phase-1b.ts',
   'src/tests/verify-phase-9.ts',
   'src/tests/verify-security-hardening.ts',
   'src/tests/verify-comprehensive-matrix.ts',

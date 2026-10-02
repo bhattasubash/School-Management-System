@@ -117,8 +117,8 @@ export async function updateEmergencyContactAction(rawInput: UpdateEmergencyCont
       return { success: false, error: 'Emergency contact not found.' };
     }
 
-    const updated = await prisma.emergencyContact.update({
-      where: { id: input.id },
+    await prisma.emergencyContact.updateMany({
+      where: { id: input.id, tenantId },
       data: {
         ...(input.name !== undefined && { name: input.name }),
         ...(input.designation !== undefined && { designation: input.designation }),
@@ -129,6 +129,10 @@ export async function updateEmergencyContactAction(rawInput: UpdateEmergencyCont
       },
     });
 
+    const updated = await prisma.emergencyContact.findFirst({
+      where: { id: input.id, tenantId },
+    });
+
     // Audit log
     await prisma.auditLog.create({
       data: {
@@ -137,7 +141,7 @@ export async function updateEmergencyContactAction(rawInput: UpdateEmergencyCont
         action: 'EMERGENCY_CONTACT_UPDATED',
         entityType: 'EmergencyContact',
         entityId: input.id,
-        newValues: { name: updated.name, designation: updated.designation },
+        newValues: { name: updated?.name, designation: updated?.designation },
       },
     });
 
@@ -170,9 +174,13 @@ export async function deleteEmergencyContactAction(id: string) {
       return { success: false, error: 'Emergency contact not found.' };
     }
 
-    await prisma.emergencyContact.delete({
-      where: { id },
+    const result = await prisma.emergencyContact.deleteMany({
+      where: { id, tenantId },
     });
+
+    if (result.count === 0) {
+      return { success: false, error: 'Emergency contact not found.' };
+    }
 
     // Audit log
     await prisma.auditLog.create({

@@ -77,9 +77,17 @@ export async function resolveTenantByHostname(hostname: string): Promise<TenantC
   }
 
   // 3. Check Subdomain: e.g. "dps.schoolerp.in" -> slug "dps"
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'schoolerp.in';
-  if (cleanHost.endsWith(`.${appDomain}`)) {
-    const slug = cleanHost.replace(`.${appDomain}`, '');
+  const rawAppDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'schoolerp.in';
+  const appDomain = rawAppDomain.split(':')[0].toLowerCase();
+
+  let slug: string | null = null;
+  if (appDomain && cleanHost.endsWith(`.${appDomain}`)) {
+    slug = cleanHost.replace(`.${appDomain}`, '');
+  } else if (cleanHost.endsWith('.schoolerp.in')) {
+    slug = cleanHost.replace('.schoolerp.in', '');
+  }
+
+  if (slug) {
     const tenantBySlug = await prisma.tenant.findUnique({
       where: { slug, isActive: true },
       include: { branding: true },

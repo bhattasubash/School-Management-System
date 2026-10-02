@@ -71,6 +71,14 @@ export async function createHolidayAction(rawInput: CreateHolidayInput) {
   const holidayDate = new Date(`${input.date}T00:00:00.000Z`);
 
   try {
+    // Verify academic session belongs to this tenant
+    const academicSession = await prisma.academicYear.findFirst({
+      where: { id: input.sessionId, tenantId },
+    });
+    if (!academicSession) {
+      return { success: false, error: 'Academic session not found in your school.' };
+    }
+
     // Check for duplicate date in the same session
     const existing = await prisma.holiday.findUnique({
       where: {
@@ -138,9 +146,13 @@ export async function deleteHolidayAction(id: string) {
       return { success: false, error: 'Holiday not found.' };
     }
 
-    await prisma.holiday.delete({
-      where: { id },
+    const result = await prisma.holiday.deleteMany({
+      where: { id, tenantId },
     });
+
+    if (result.count === 0) {
+      return { success: false, error: 'Holiday not found.' };
+    }
 
     // Audit log
     await prisma.auditLog.create({

@@ -7,11 +7,29 @@ const SESSION_COOKIE_NAME = 'session_token';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const host = request.headers.get('host') || 'localhost:3000';
-  const cleanHost = host.split(':')[0].toLowerCase();
-  const appDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'schoolerp.in';
+  const rawHost = request.headers.get('host') || 'localhost:3000';
+  const cleanHost = rawHost.split(':')[0].trim().toLowerCase();
+  const rawAppDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'schoolerp.in';
+  const appDomain = rawAppDomain.split(':')[0].toLowerCase();
+
+  // Guard against malformed Host headers or header injection
+  const isValidHost = /^[a-z0-9.-]+$/.test(cleanHost);
+  if (!isValidHost) {
+    return new NextResponse('Bad Request: Invalid Host header format', { status: 400 });
+  }
 
   const requestHeaders = new Headers(request.headers);
+
+  // Security: Strip internal headers to prevent client-side spoofing
+  requestHeaders.delete('x-user-id');
+  requestHeaders.delete('x-user-role');
+  requestHeaders.delete('x-user-email');
+  requestHeaders.delete('x-user-tenant-id');
+  requestHeaders.delete('x-tenant-id');
+  requestHeaders.delete('x-tenant-slug');
+  requestHeaders.delete('x-tenant-name');
+  requestHeaders.delete('x-tenant-domain');
+  requestHeaders.delete('x-is-superadmin-domain');
 
   // 1. Domain & Tenant derivation
   const isSuperAdminDomain =
@@ -26,7 +44,10 @@ export async function middleware(request: NextRequest) {
 
   let slug: string | null = null;
   if (cleanHost.endsWith(`.${appDomain}`)) {
-    slug = cleanHost.replace(`.${appDomain}`, '');
+    const candidate = cleanHost.replace(`.${appDomain}`, '');
+    if (/^[a-z0-9-]+$/.test(candidate) && candidate !== 'app' && candidate !== 'admin') {
+      slug = candidate;
+    }
   } else if (!isSuperAdminDomain) {
     requestHeaders.set('x-tenant-domain', cleanHost);
   }

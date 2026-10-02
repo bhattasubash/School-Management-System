@@ -173,6 +173,14 @@ export async function assignTeacherSubstitutionAction(rawInput: AssignSubstituti
       return { success: false as const, error: 'Substitute teacher cannot be the same as the assigned teacher.' };
     }
 
+    const substituteTeacher = await prisma.teacherProfile.findFirst({
+      where: { id: substituteTeacherId, tenantId: context.tenantId },
+    });
+
+    if (!substituteTeacher) {
+      return { success: false as const, error: 'Substitute teacher not found in your school.' };
+    }
+
     const subDate = new Date(date);
     subDate.setHours(0, 0, 0, 0);
 
