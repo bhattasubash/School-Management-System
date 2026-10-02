@@ -6,6 +6,7 @@ import {
   verifySessionToken,
   getJwtSecretKey,
 } from '@/lib/jwt';
+import { isSessionRevoked } from '@/lib/session-revocation';
 
 export { createSessionToken, verifySessionToken, getJwtSecretKey };
 
@@ -39,8 +40,6 @@ export async function clearSessionCookie(): Promise<void> {
     maxAge: 0,
   });
 }
-
-import { isSessionRevoked } from '@/lib/session-revocation';
 
 let testSessionOverride: JWTPayload | null = null;
 
