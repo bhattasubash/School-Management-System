@@ -173,6 +173,8 @@ async function main() {
 
   let mainTeacherProfileId: string | null = null;
   let colleagueTeacherProfileId: string | null = null;
+  let adminUserId: string | null = null;
+  let mainTeacherUserId: string | null = null;
 
   for (const item of usersToSeed) {
     const passwordHash = await bcrypt.hash(item.password, 12);
@@ -207,6 +209,13 @@ async function main() {
           lockedUntil: null,
         },
       });
+    }
+
+    if (item.email === 'admin@dps.edu.in') {
+      adminUserId = user.id;
+    }
+    if (item.email === 'teacher@dps.edu.in') {
+      mainTeacherUserId = user.id;
     }
 
     // Role-specific profile links
@@ -477,7 +486,7 @@ async function main() {
           date: todayDateOnly,
           reason: 'Medical Leave (Fever)',
           status: SubstitutionStatus.ASSIGNED,
-          assignedById: mainTeacherProfileId,
+          assignedById: adminUserId!,
         },
       });
       console.log('Seeded sample active substitution for teacher');
@@ -678,7 +687,7 @@ async function main() {
             marksObtained: score.marks,
             grade: score.grade,
             gradePoint: score.gp,
-            enteredById: mainTeacherProfileId,
+            enteredById: mainTeacherUserId!,
           },
         });
       }

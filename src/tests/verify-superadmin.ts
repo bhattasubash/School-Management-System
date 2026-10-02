@@ -291,8 +291,12 @@ async function main() {
 }
 
 main()
-  .catch((err) => {
-    console.error('VERIFICATION ERROR:', err);
-    process.exit(1);
+  .then(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
   })
-  .finally(() => prisma.$disconnect());
+  .catch(async (err) => {
+    console.error('VERIFICATION ERROR:', err);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
