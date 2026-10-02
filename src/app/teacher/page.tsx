@@ -13,7 +13,8 @@ export default async function TeacherDashboardPage() {
   // Match reference specification exact name
   const teacherName = 'Sanjay Yadav';
 
-  if (session?.tenantId && session?.sub) {
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (session?.tenantId && session?.sub && isUuid.test(session.sub) && isUuid.test(session.tenantId)) {
     try {
       todayAttendance = await prisma.staffAttendance.findFirst({
         where: {
