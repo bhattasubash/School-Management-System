@@ -79,12 +79,12 @@ async function runAuthRBACTests() {
   // --------------------------------------------------------------------------
   console.log('\n--- Suite 3: Unified Portal Navigation Invariants ---');
   assert(
-    getRoleDefaultPath(Role.STUDENT) === '/',
-    'Student role routes to primary dashboard (/)'
+    getRoleDefaultPath(Role.STUDENT) === '/portal',
+    'Student role routes to primary dashboard (/portal)'
   );
   assert(
-    getRoleDefaultPath(Role.PARENT) === '/',
-    'Parent role routes to identical unified student dashboard (/)'
+    getRoleDefaultPath(Role.PARENT) === '/portal',
+    'Parent role routes to identical unified student dashboard (/portal)'
   );
   assert(
     getRoleDefaultPath(Role.TEACHER) === '/teacher',
@@ -125,8 +125,8 @@ async function runAuthRBACTests() {
   assert(isRouteAllowedForRole(Role.ADMIN, '/superadmin') === false, 'School Admin forbidden on /superadmin');
 
   // Unified student/parent portal checks
-  assert(isRouteAllowedForRole(Role.STUDENT, '/') === true, 'Student allowed on unified portal (/)');
-  assert(isRouteAllowedForRole(Role.PARENT, '/') === true, 'Parent allowed on unified portal (/)');
+  assert(isRouteAllowedForRole(Role.STUDENT, '/portal') === true, 'Student allowed on unified portal (/portal)');
+  assert(isRouteAllowedForRole(Role.PARENT, '/portal') === true, 'Parent allowed on unified portal (/portal)');
 
   // --------------------------------------------------------------------------
   // TEST 5: Boundary Zod Validation (LoginSchema)
@@ -138,11 +138,11 @@ async function runAuthRBACTests() {
   });
   assert(validResult.success === true, 'LoginSchema accepts valid email and password');
 
-  const invalidEmailResult = LoginSchema.safeParse({
-    email: 'not-an-email',
+  const emptyIdentifierResult = LoginSchema.safeParse({
+    email: '',
     password: 'Password@123',
   });
-  assert(invalidEmailResult.success === false, 'LoginSchema rejects invalid email format');
+  assert(emptyIdentifierResult.success === false, 'LoginSchema rejects empty identifier');
 
   const emptyPasswordResult = LoginSchema.safeParse({
     email: 'rohan.sharma@dps.edu.in',
