@@ -419,7 +419,7 @@ export default function AdminExamsClient({
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-500 italic mt-3 line-clamp-1">"{rc.remarks}"</p>
+                  <p className="text-xs text-slate-500 italic mt-3 line-clamp-1">&ldquo;{rc.remarks}&rdquo;</p>
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -667,7 +667,7 @@ export default function AdminExamsClient({
             {/* Remarks */}
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-xs">
               <span className="text-slate-400 block font-bold uppercase text-[10px] mb-1">Class Teacher Remarks:</span>
-              <p className="text-slate-700 italic font-medium leading-relaxed">"{activeReportCard.remarks}"</p>
+              <p className="text-slate-700 italic font-medium leading-relaxed">&ldquo;{activeReportCard.remarks}&rdquo;</p>
             </div>
 
             {/* Print Button */}
