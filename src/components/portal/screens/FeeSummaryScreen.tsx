@@ -12,6 +12,7 @@ interface FeeSummaryScreenProps {
     totalPaid: number;
     statusText: string;
   };
+  onPayInvoice?: (invoiceId?: string, amount?: number) => void;
   onBackToDashboard: () => void;
   onSelectNav: (id: string) => void;
 }
@@ -26,10 +27,11 @@ const FEE_BREAKDOWN = [
 
 export default function FeeSummaryScreen({
   feeStatus,
+  onPayInvoice,
   onBackToDashboard,
   onSelectNav,
 }: FeeSummaryScreenProps) {
-  const pending = feeStatus.pendingAmount > 0 ? feeStatus.pendingAmount : 4500;
+  const pending = feeStatus.pendingAmount;
   const isPaid = pending === 0;
 
   return (
@@ -48,7 +50,7 @@ export default function FeeSummaryScreen({
         </button>
         <button
           type="button"
-          onClick={() => onSelectNav('online-payment')}
+          onClick={() => (onPayInvoice ? onPayInvoice(undefined, pending) : onSelectNav('online-payment'))}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold shadow-xs transition-colors"
         >
           <CreditCard className="w-4 h-4" />
@@ -149,16 +151,16 @@ export default function FeeSummaryScreen({
                   <td className="py-3.5 px-4 text-center">
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                        row.status === 'Paid'
+                        row.status === 'Paid' || (row.category.includes('Annual CBSE') && isPaid)
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}
                     >
-                      {row.status}
+                      {row.status === 'Paid' || (row.category.includes('Annual CBSE') && isPaid) ? 'Paid' : 'Pending'}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    {row.status === 'Paid' ? (
+                    {row.status === 'Paid' || (row.category.includes('Annual CBSE') && isPaid) ? (
                       <button
                         type="button"
                         onClick={() => alert(`Downloading receipt for ${row.category}`)}
@@ -169,8 +171,8 @@ export default function FeeSummaryScreen({
                     ) : (
                       <button
                         type="button"
-                        onClick={() => onSelectNav('online-payment')}
-                        className="px-3 py-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-semibold"
+                        onClick={() => (onPayInvoice ? onPayInvoice(undefined, 4500) : onSelectNav('online-payment'))}
+                        className="px-3 py-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs transition-colors"
                       >
                         Pay Now
                       </button>

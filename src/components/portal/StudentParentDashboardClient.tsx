@@ -130,6 +130,22 @@ export interface StudentDashboardProps {
     date: string;
     type: string;
   }>;
+  invoices?: Array<{
+    id: string;
+    invoiceNumber: string;
+    title: string;
+    totalAmount: number;
+    paidAmount: number;
+    balanceAmount: number;
+    dueDate: string;
+    status: 'Paid' | 'Pending' | 'Partial' | 'Overdue';
+    items: Array<{
+      category: string;
+      amount: number;
+      paid: number;
+      status: 'Paid' | 'Pending';
+    }>;
+  }>;
   initialView?: string;
 }
 
@@ -143,6 +159,7 @@ export default function StudentParentDashboardClient({
   faculty,
   events = [],
   holidays = [],
+  invoices = [],
   initialView = 'dashboard',
 }: StudentDashboardProps) {
   const router = useRouter();
@@ -153,6 +170,23 @@ export default function StudentParentDashboardClient({
   const [activeNav, setActiveNav] = useState<string>(viewFromQuery || 'dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  // Dynamic fee status & payment selection state
+  const [feeStatusState, setFeeStatusState] = useState(stats.feeStatus);
+  const [selectedPaymentInvoiceId, setSelectedPaymentInvoiceId] = useState<string | null>(null);
+  const [selectedPaymentAmount, setSelectedPaymentAmount] = useState<number | null>(null);
+
+  const handlePaymentSuccess = (paidAmount: number, _receiptNo: string) => {
+    setFeeStatusState((prev) => {
+      const newPending = Math.max(0, prev.pendingAmount - paidAmount);
+      return {
+        ...prev,
+        pendingAmount: newPending,
+        totalPaid: prev.totalPaid + paidAmount,
+        statusText: newPending === 0 ? 'Fully Paid' : 'Payment Due',
+      };
+    });
+  };
 
   // Modals state
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
@@ -319,7 +353,12 @@ export default function StudentParentDashboardClient({
 
             {activeNav === 'fee-summary' && (
               <FeeSummaryScreen
-                feeStatus={stats.feeStatus}
+                feeStatus={feeStatusState}
+                onPayInvoice={(invoiceId, amount) => {
+                  setSelectedPaymentInvoiceId(invoiceId || null);
+                  setSelectedPaymentAmount(amount || null);
+                  handleSelectNav('online-payment');
+                }}
                 onBackToDashboard={() => handleSelectNav('dashboard')}
                 onSelectNav={handleSelectNav}
               />
@@ -341,6 +380,21 @@ export default function StudentParentDashboardClient({
 
             {activeNav === 'online-payment' && (
               <OnlinePaymentScreen
+                student={{
+                  id: student.id,
+                  name: student.name,
+                  admissionNumber: student.admissionNumber,
+                  rollNumber: student.rollNumber,
+                  sectionName: student.sectionName,
+                  className: student.className,
+                  board: student.board,
+                  avatarUrl: student.avatarUrl,
+                }}
+                feeStatus={feeStatusState}
+                invoices={invoices}
+                initialInvoiceId={selectedPaymentInvoiceId}
+                initialAmount={selectedPaymentAmount}
+                onPaymentSuccess={handlePaymentSuccess}
                 onBackToDashboard={() => handleSelectNav('dashboard')}
                 onSelectNav={handleSelectNav}
               />
