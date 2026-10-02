@@ -75,18 +75,7 @@ export default async function PortalPage({ searchParams }: PageProps) {
   if (currentUser.parentProfile) {
     const parentLinks = currentUser.parentProfile.students;
     if (parentLinks.length === 0) {
-      // Fallback: If no links exist, look up any student in the tenant for demo
-      targetStudent = await prisma.studentProfile.findFirst({
-        where: { tenantId: currentUser.tenantId || undefined },
-        include: {
-          user: true,
-          section: {
-            include: {
-              classGrade: true,
-            },
-          },
-        },
-      });
+      targetStudent = null;
     } else {
       // Determine active child from query param or default to primary
       const requestedChildId = searchParams?.child;
@@ -116,21 +105,6 @@ export default async function PortalPage({ searchParams }: PageProps) {
     }
   } else if (currentUser.studentProfile) {
     targetStudent = currentUser.studentProfile;
-  }
-
-  // Defensive fallback if no student profile could be found
-  if (!targetStudent) {
-    targetStudent = await prisma.studentProfile.findFirst({
-      where: { tenantId: currentUser.tenantId || undefined },
-      include: {
-        user: true,
-        section: {
-          include: {
-            classGrade: true,
-          },
-        },
-      },
-    });
   }
 
   if (!targetStudent) {

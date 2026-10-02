@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+import { getSessionFromCookies, getRoleDefaultPath } from '@/lib/session';
 import LandingPage from '@/components/landing/LandingPage';
 
 export const metadata = {
@@ -6,6 +8,11 @@ export const metadata = {
     'All-in-One School Management for a Brighter Tomorrow. Simplify administration, enhance communication, and create a better learning experience.',
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getSessionFromCookies();
+  if (session) {
+    redirect(getRoleDefaultPath(session.role));
+  }
   return <LandingPage />;
 }
+

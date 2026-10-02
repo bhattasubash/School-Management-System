@@ -655,14 +655,20 @@ export async function exportAttendanceDataAction(
     }));
 
     if (format === 'xlsx') {
-      const XLSX = await import('xlsx');
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
-      const buffer = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+      const { createExcelWorkbookBuffer } = await import('@/lib/excel');
+      const columns = [
+        { header: 'Date', key: 'Date', width: 15 },
+        { header: 'Student Name', key: 'Student Name', width: 24 },
+        { header: 'Admission No', key: 'Admission No', width: 18 },
+        { header: 'Class', key: 'Class', width: 14 },
+        { header: 'Section', key: 'Section', width: 12 },
+        { header: 'Status', key: 'Status', width: 15 },
+        { header: 'Remarks', key: 'Remarks', width: 24 },
+      ];
+      const buffer = await createExcelWorkbookBuffer('Attendance', columns, rows);
       return {
         success: true,
-        data: buffer as string,
+        data: buffer.toString('base64'),
         fileName: `attendance_${startDate}_to_${endDate}.xlsx`,
         mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         format: 'xlsx' as const,

@@ -1,11 +1,38 @@
 'use server';
 
 import { safeRevalidatePath as revalidatePath } from '@/lib/revalidate';
-import * as XLSX from 'xlsx';
+import {
+  createExcelWorkbookBuffer,
+  parseSpreadsheetRows,
+} from '@/lib/excel';
 import { prisma } from '@/lib/db';
 import { requireAuthGuard } from '@/lib/auth-guard';
 import { Role } from '@/types';
 import { AuthService } from '@/services/auth.service';
+
+export async function parseSpreadsheetUploadAction(
+  base64Data: string,
+  fileName: string
+): Promise<{
+  success: boolean;
+  rows?: Record<string, string>[];
+  totalRows?: number;
+  error?: string;
+}> {
+  const guard = await requireAuthGuard([Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
+  }
+
+  try {
+    const buffer = Buffer.from(base64Data, 'base64');
+    const { rows, totalRows } = await parseSpreadsheetRows(buffer, fileName);
+    return { success: true, rows, totalRows };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to parse spreadsheet.';
+    return { success: false, error: msg };
+  }
+}
 
 export async function generateStudentTemplateAction(): Promise<{
   success: boolean;
@@ -14,52 +41,50 @@ export async function generateStudentTemplateAction(): Promise<{
   error?: string;
 }> {
   try {
-    const headers = [
-      'Admission Number',
-      'First Name',
-      'Last Name',
-      'Email',
-      'Phone',
-      'Date of Birth (YYYY-MM-DD)',
-      'Gender (Male/Female/Other)',
-      'Blood Group',
-      'Address',
-      'Emergency Contact',
-      'Class',
-      'Section',
-      'Father Name',
-      'Father Phone',
-      'Mother Name',
-      'Mother Phone',
+    const columns = [
+      { header: 'Admission Number', key: 'admissionNumber', width: 20 },
+      { header: 'First Name', key: 'firstName', width: 18 },
+      { header: 'Last Name', key: 'lastName', width: 18 },
+      { header: 'Email', key: 'email', width: 28 },
+      { header: 'Phone', key: 'phone', width: 18 },
+      { header: 'Date of Birth (YYYY-MM-DD)', key: 'dateOfBirth', width: 26 },
+      { header: 'Gender (Male/Female/Other)', key: 'gender', width: 26 },
+      { header: 'Blood Group', key: 'bloodGroup', width: 15 },
+      { header: 'Address', key: 'address', width: 32 },
+      { header: 'Emergency Contact', key: 'emergencyContact', width: 22 },
+      { header: 'Class', key: 'class', width: 15 },
+      { header: 'Section', key: 'section', width: 12 },
+      { header: 'Father Name', key: 'fatherName', width: 20 },
+      { header: 'Father Phone', key: 'fatherPhone', width: 18 },
+      { header: 'Mother Name', key: 'motherName', width: 20 },
+      { header: 'Mother Phone', key: 'motherPhone', width: 18 },
     ];
 
-    const sampleRow = [
-      'ADM-2026-001',
-      'Rahul',
-      'Verma',
-      'rahul.verma@example.com',
-      '9876543210',
-      '2010-05-15',
-      'Male',
-      'B+',
-      '123 Civil Lines, New Delhi',
-      '9876543210',
-      'Class 10',
-      'A',
-      'Suresh Verma',
-      '9876543210',
-      'Anita Verma',
-      '9876543211',
+    const sampleRows = [
+      {
+        admissionNumber: 'ADM-2026-001',
+        firstName: 'Rahul',
+        lastName: 'Verma',
+        email: 'rahul.verma@example.com',
+        phone: '9876543210',
+        dateOfBirth: '2010-05-15',
+        gender: 'Male',
+        bloodGroup: 'B+',
+        address: '123 Civil Lines, New Delhi',
+        emergencyContact: '9876543210',
+        class: 'Class 10',
+        section: 'A',
+        fatherName: 'Suresh Verma',
+        fatherPhone: '9876543210',
+        motherName: 'Anita Verma',
+        motherPhone: '9876543211',
+      },
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Students_Template');
-
-    const buffer = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    const buffer = await createExcelWorkbookBuffer('Students_Template', columns, sampleRows);
     return {
       success: true,
-      base64: buffer,
+      base64: buffer.toString('base64'),
       fileName: 'student_import_template.xlsx',
     };
   } catch (err: unknown) {
@@ -75,38 +100,36 @@ export async function generateTeacherTemplateAction(): Promise<{
   error?: string;
 }> {
   try {
-    const headers = [
-      'Employee ID',
-      'First Name',
-      'Last Name',
-      'Email',
-      'Phone',
-      'Department',
-      'Qualification',
-      'Specialization',
-      'Joining Date (YYYY-MM-DD)',
+    const columns = [
+      { header: 'Employee ID', key: 'employeeId', width: 18 },
+      { header: 'First Name', key: 'firstName', width: 18 },
+      { header: 'Last Name', key: 'lastName', width: 18 },
+      { header: 'Email', key: 'email', width: 28 },
+      { header: 'Phone', key: 'phone', width: 18 },
+      { header: 'Department', key: 'department', width: 24 },
+      { header: 'Qualification', key: 'qualification', width: 22 },
+      { header: 'Specialization', key: 'specialization', width: 24 },
+      { header: 'Joining Date (YYYY-MM-DD)', key: 'joiningDate', width: 26 },
     ];
 
-    const sampleRow = [
-      'EMP-101',
-      'Sita',
-      'Raman',
-      'sita.raman@example.com',
-      '9876543220',
-      'Mathematics',
-      'M.Sc. B.Ed.',
-      'Calculus',
-      '2022-06-01',
+    const sampleRows = [
+      {
+        employeeId: 'EMP-101',
+        firstName: 'Sita',
+        lastName: 'Raman',
+        email: 'sita.raman@example.com',
+        phone: '9876543220',
+        department: 'Mathematics',
+        qualification: 'M.Sc. B.Ed.',
+        specialization: 'Calculus',
+        joiningDate: '2022-06-01',
+      },
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Teachers_Template');
-
-    const buffer = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    const buffer = await createExcelWorkbookBuffer('Teachers_Template', columns, sampleRows);
     return {
       success: true,
-      base64: buffer,
+      base64: buffer.toString('base64'),
       fileName: 'teacher_import_template.xlsx',
     };
   } catch (err: unknown) {

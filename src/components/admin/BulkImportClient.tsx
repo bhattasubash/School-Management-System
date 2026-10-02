@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import * as XLSX from 'xlsx';
 import {
   UploadCloud,
   Download,
@@ -26,6 +25,7 @@ import {
   generateTeacherTemplateAction,
   importStudentsBatchAction,
   importTeachersBatchAction,
+  parseSpreadsheetUploadAction,
 } from '@/actions/admin/import';
 
 type ImportType = 'STUDENTS' | 'TEACHERS';
@@ -68,21 +68,26 @@ export default function BulkImportClient() {
     }
   };
 
-  // 2. Parse uploaded file with SheetJS
+  // 2. Parse uploaded file securely on server via ExcelJS
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
     setImportResults(null);
     setIsParsing(true);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const rawJson: Record<string, any>[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        const result = e.target?.result as string;
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        const res = await parseSpreadsheetUploadAction(base64, selectedFile.name);
 
+        if (!res.success || !res.rows) {
+          alert('Failed to parse spreadsheet file: ' + (res.error || 'Unknown error'));
+          setIsParsing(false);
+          return;
+        }
+
+        const rawJson = res.rows;
         const validated: ParsedRow[] = rawJson.map((row, index) => {
           const errors: string[] = [];
 
@@ -128,7 +133,7 @@ export default function BulkImportClient() {
       }
     };
 
-    reader.readAsBinaryString(selectedFile);
+    reader.readAsDataURL(selectedFile);
   };
 
   const handleClear = () => {

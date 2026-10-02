@@ -104,9 +104,9 @@ export function getRoleDefaultPath(role: RoleType): string {
       return '/admin/fees';
     case Role.STUDENT:
     case Role.PARENT:
-      return '/'; // Unified Student & Parent Portal
+      return '/portal'; // Unified Student & Parent Portal
     default:
-      return '/';
+      return '/portal';
   }
 }
 
