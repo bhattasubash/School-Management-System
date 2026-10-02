@@ -84,6 +84,48 @@ export const SubstitutionStatus = {
 
 export type SubstitutionStatusType = (typeof SubstitutionStatus)[keyof typeof SubstitutionStatus];
 
+export const NotificationType = {
+  GENERAL: 'GENERAL',
+  ATTENDANCE: 'ATTENDANCE',
+  FEE: 'FEE',
+  EXAM: 'EXAM',
+  EVENT: 'EVENT',
+  SYSTEM: 'SYSTEM',
+  LEAVE: 'LEAVE',
+  COMPLAINT: 'COMPLAINT',
+} as const;
+
+export type NotificationTypeEnum = (typeof NotificationType)[keyof typeof NotificationType];
+
+export const EventCategory = {
+  ACADEMIC: 'ACADEMIC',
+  CULTURAL: 'CULTURAL',
+  SPORTS: 'SPORTS',
+  ANNOUNCEMENT: 'ANNOUNCEMENT',
+} as const;
+
+export type EventCategoryEnum = (typeof EventCategory)[keyof typeof EventCategory];
+
+export const HolidayType = {
+  NATIONAL: 'NATIONAL',
+  STATE: 'STATE',
+  SCHOOL: 'SCHOOL',
+  EXAM_BREAK: 'EXAM_BREAK',
+} as const;
+
+export type HolidayTypeEnum = (typeof HolidayType)[keyof typeof HolidayType];
+
+export const ContactCategory = {
+  MEDICAL: 'MEDICAL',
+  ADMINISTRATION: 'ADMINISTRATION',
+  SECURITY: 'SECURITY',
+  FIRE: 'FIRE',
+  POLICE: 'POLICE',
+  OTHER: 'OTHER',
+} as const;
+
+export type ContactCategoryEnum = (typeof ContactCategory)[keyof typeof ContactCategory];
+
 
 // ----------------------------------------------------------------------------
 // TENANT CONTEXT & AUTH TYPES

@@ -35,7 +35,7 @@ import {
   updatePeriodTimeSlotAction,
   deletePeriodTimeSlotAction,
   updateWorkingDaysAction,
-} from '@/actions/admin';
+} from '@/actions/admin/timetable';
 import type { DayOfWeek } from '@prisma/client';
 
 export interface SectionOption {
@@ -530,7 +530,7 @@ export default function TimetableBuilderClient({
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         {isLoadingEntries ? (
           <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-[#FA896B]" />
+            <RefreshCw className="w-6 h-6 animate-spin text-[#0B72E7]" />
             <span>Loading section schedule...</span>
           </div>
         ) : timeSlots.length === 0 ? (
@@ -615,7 +615,7 @@ export default function TimetableBuilderClient({
                             {entry ? (
                               <div
                                 onClick={() => handleCellClick(day.key, slot.id)}
-                                className="group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#FA896B] rounded-lg p-2.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer border-l-4 border-l-[#FA896B]"
+                                className="group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0B72E7] rounded-lg p-2.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer border-l-4 border-l-[#0B72E7]"
                               >
                                 <div className="flex items-start justify-between gap-1 mb-1">
                                   <span className="font-bold text-slate-900 line-clamp-1">
@@ -645,13 +645,13 @@ export default function TimetableBuilderClient({
                                 )}
 
                                 <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Edit2 className="w-3 h-3 text-[#FA896B]" />
+                                  <Edit2 className="w-3 h-3 text-[#0B72E7]" />
                                 </div>
                               </div>
                             ) : (
                               <button
                                 onClick={() => handleCellClick(day.key, slot.id)}
-                                className="w-full h-full min-h-[70px] rounded-lg border border-dashed border-slate-200 hover:border-[#FA896B] hover:bg-coral-50/10 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-[#FA896B] transition-all cursor-pointer"
+                                className="w-full h-full min-h-[70px] rounded-lg border border-dashed border-slate-200 hover:border-[#0B72E7] hover:bg-coral-50/10 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-[#0B72E7] transition-all cursor-pointer"
                               >
                                 <Plus className="w-4 h-4" />
                                 <span className="text-[10px] font-medium">Assign</span>
@@ -743,7 +743,7 @@ export default function TimetableBuilderClient({
                   placeholder="e.g. Room 204, Physics Lab"
                   value={assignRoomNumber}
                   onChange={(e) => setAssignRoomNumber(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#FA896B] focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#0B72E7] focus:border-transparent outline-none"
                 />
               </div>
 
@@ -773,7 +773,7 @@ export default function TimetableBuilderClient({
                   <button
                     type="submit"
                     disabled={isPending || !assignSubjectId}
-                    className="px-4 py-2 text-xs font-bold text-white bg-[#FA896B] hover:bg-[#f87552] disabled:opacity-50 rounded-lg transition-colors shadow-xs cursor-pointer"
+                    className="px-4 py-2 text-xs font-bold text-white bg-[#0B72E7] hover:bg-[#0960C4] disabled:opacity-50 rounded-lg transition-colors shadow-xs cursor-pointer"
                   >
                     {isPending ? 'Saving...' : 'Save Period'}
                   </button>
@@ -792,7 +792,7 @@ export default function TimetableBuilderClient({
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-orange-100 text-[#FA896B] flex items-center justify-center font-bold">
+                <div className="w-7 h-7 rounded-lg bg-orange-100 text-[#0B72E7] flex items-center justify-center font-bold">
                   <Copy className="w-3.5 h-3.5" />
                 </div>
                 <div>
@@ -853,7 +853,7 @@ export default function TimetableBuilderClient({
                   type="button"
                   onClick={handleCloneTimetable}
                   disabled={isPending || !cloneSourceSectionId}
-                  className="px-4 py-2 text-xs font-bold text-white bg-[#FA896B] hover:bg-[#f87552] disabled:opacity-50 rounded-lg transition-colors shadow-xs cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#0B72E7] hover:bg-[#0960C4] disabled:opacity-50 rounded-lg transition-colors shadow-xs cursor-pointer"
                 >
                   {isPending ? 'Cloning...' : 'Confirm & Clone'}
                 </button>
@@ -902,7 +902,7 @@ export default function TimetableBuilderClient({
                       onClick={() => handleToggleDay(day.key)}
                       className={`flex items-center gap-2.5 p-3 rounded-lg border cursor-pointer select-none transition-all ${
                         isChecked
-                          ? 'border-[#FA896B] bg-coral-50/10 text-slate-900 font-semibold'
+                          ? 'border-[#0B72E7] bg-coral-50/10 text-slate-900 font-semibold'
                           : 'border-slate-200 hover:border-slate-300 text-slate-500'
                       }`}
                     >
@@ -910,7 +910,7 @@ export default function TimetableBuilderClient({
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => {}}
-                        className="rounded border-slate-300 text-[#FA896B] focus:ring-[#FA896B]"
+                        className="rounded border-slate-300 text-[#0B72E7] focus:ring-[#0B72E7]"
                       />
                       <span>{day.label}</span>
                     </label>
@@ -986,7 +986,7 @@ export default function TimetableBuilderClient({
                       placeholder="e.g. Period 1"
                       value={slotFormName}
                       onChange={(e) => setSlotFormName(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#FA896B]"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#0B72E7]"
                     />
                   </div>
 
@@ -999,7 +999,7 @@ export default function TimetableBuilderClient({
                       required
                       value={slotFormStart}
                       onChange={(e) => setSlotFormStart(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#FA896B]"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#0B72E7]"
                     />
                   </div>
 
@@ -1012,7 +1012,7 @@ export default function TimetableBuilderClient({
                       required
                       value={slotFormEnd}
                       onChange={(e) => setSlotFormEnd(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#FA896B]"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#0B72E7]"
                     />
                   </div>
 
@@ -1026,7 +1026,7 @@ export default function TimetableBuilderClient({
                       min={1}
                       value={slotFormOrder}
                       onChange={(e) => setSlotFormOrder(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#FA896B]"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-[#0B72E7]"
                     />
                   </div>
                 </div>
@@ -1037,7 +1037,7 @@ export default function TimetableBuilderClient({
                       type="checkbox"
                       checked={slotFormIsBreak}
                       onChange={(e) => setSlotFormIsBreak(e.target.checked)}
-                      className="rounded border-slate-300 text-[#FA896B] focus:ring-[#FA896B]"
+                      className="rounded border-slate-300 text-[#0B72E7] focus:ring-[#0B72E7]"
                     />
                     <span>Mark as Break / Recess Period</span>
                   </label>

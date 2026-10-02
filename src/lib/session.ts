@@ -1,54 +1,16 @@
-import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import type { JWTPayload, RoleType } from '@/types';
 import { Role } from '@/types';
+import {
+  createSessionToken,
+  verifySessionToken,
+  getJwtSecretKey,
+} from '@/lib/jwt';
+
+export { createSessionToken, verifySessionToken, getJwtSecretKey };
 
 export const SESSION_COOKIE_NAME = 'session_token';
 export const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
-
-function getSecretKey(): Uint8Array {
-  const secret = process.env.JWT_SECRET || 'school-erp-super-secure-jwt-secret-min-32-chars-long';
-  return new TextEncoder().encode(secret);
-}
-
-/**
- * Creates a signed JWT session token valid for 7 days.
- */
-export async function createSessionToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): Promise<string> {
-  const key = getSecretKey();
-  return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('7d')
-    .sign(key);
-}
-
-/**
- * Verifies and decodes a signed JWT session token.
- * Returns null if token is expired, corrupted, or tampered.
- */
-export async function verifySessionToken(token: string): Promise<JWTPayload | null> {
-  try {
-    const key = getSecretKey();
-    const { payload } = await jwtVerify(token, key, {
-      algorithms: ['HS256'],
-    });
-
-    return {
-      sub: payload.sub as string,
-      tenantId: (payload.tenantId as string) || null,
-      role: payload.role as RoleType,
-      email: payload.email as string,
-      firstName: payload.firstName as string | undefined,
-      lastName: payload.lastName as string | undefined,
-      mustChangePassword: Boolean(payload.mustChangePassword),
-      iat: payload.iat,
-      exp: payload.exp,
-    };
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Sets the session cookie in HTTP-only mode.
@@ -78,14 +40,52 @@ export async function clearSessionCookie(): Promise<void> {
   });
 }
 
+import { isSessionRevoked } from '@/lib/session-revocation';
+
+let testSessionOverride: JWTPayload | null = null;
+
 /**
- * Extracts and verifies the current session from incoming request cookies.
+ * For testing and offline verification only.
+ */
+export function setTestSessionOverride(session: JWTPayload | null) {
+  testSessionOverride = session;
+}
+
+/**
+ * Extracts and verifies the current session from incoming request cookies,
+ * checking whether the token has been revoked.
  */
 export async function getSessionFromCookies(): Promise<JWTPayload | null> {
-  const cookieStore = cookies();
-  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifySessionToken(token);
+  let token: string | undefined;
+
+  try {
+    const cookieStore = cookies();
+    token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  } catch {
+    // If called outside request context (e.g. test runner, background job)
+    if (process.env.NODE_ENV !== 'production' && testSessionOverride) {
+      return testSessionOverride;
+    }
+    return null;
+  }
+
+  if (!token) {
+    if (process.env.NODE_ENV !== 'production' && testSessionOverride) {
+      return testSessionOverride;
+    }
+    return null;
+  }
+
+  const payload = await verifySessionToken(token);
+  if (!payload) return null;
+
+  // Check if session has been revoked (e.g. after password change, reset, or logout)
+  if (payload.sub && payload.iat) {
+    const revoked = await isSessionRevoked(payload.sub, payload.iat);
+    if (revoked) return null;
+  }
+
+  return payload;
 }
 
 /**

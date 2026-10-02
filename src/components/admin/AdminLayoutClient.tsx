@@ -26,28 +26,27 @@ export default function AdminLayoutClient({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-sans antialiased selection:bg-[#C2410C]/20 selection:text-[#C2410C]">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-gradient-to-br from-[#D8EEFE] via-[#E6F3FE] to-[#EDF6FD] text-[#0F172A] font-sans antialiased selection:bg-[#0B72E7]/20 selection:text-[#0B72E7] relative">
+      {/* Floating Standalone Left Sidebar */}
       <AdminSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         schoolName={schoolName}
-        board={board}
-        academicYear={academicYear}
+        tagline="Learn · Grow · Excel"
       />
 
-      {/* Main Content Shell offset by Sidebar on desktop */}
-      <div className="lg:pl-72 flex flex-col min-h-screen">
-        {/* Global Admin Header */}
+      {/* Main Content Area offset by Sidebar on desktop */}
+      <div className="lg:pl-[304px] flex flex-col min-h-screen p-3 md:p-4">
+        {/* Top Header */}
         <AdminHeader
           onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-          adminName={adminName}
+          adminName="Admin"
           adminEmail={adminEmail}
           role={role}
         />
 
-        {/* Dynamic Page Content with consistent 24-32px padding */}
-        <main className="flex-1 p-6 md:p-8 max-w-[1440px] w-full mx-auto space-y-6">
+        {/* Dynamic Page Content */}
+        <main className="flex-1 w-full max-w-[1536px] mx-auto py-2.5 space-y-4">
           {children}
         </main>
       </div>

@@ -13,17 +13,24 @@ export interface DataCardProps {
 
 const paddingMap = {
   none: '',
-  sm: 'p-3',
-  md: 'p-4 sm:p-5',
-  lg: 'p-5 sm:p-6',
+  sm: 'p-3.5',
+  md: 'p-5 lg:p-6',
+  lg: 'p-6 lg:p-7',
 };
 
-export default function DataCard({ children, className, hover = true, padding = 'md', onClick }: DataCardProps) {
+export default function DataCard({
+  children,
+  className,
+  hover = true,
+  padding = 'md',
+  onClick,
+}: DataCardProps) {
   return (
     <div
       className={clsx(
-        'bg-white rounded-xl shadow-card',
-        hover && 'transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5',
+        'bg-white rounded-[24px] border border-[#E2EEF8]/80 shadow-[0_4px_24px_rgba(30,64,175,0.04)]',
+        hover &&
+          'transition-all duration-200 hover:shadow-[0_8px_30px_rgba(30,64,175,0.08)] hover:-translate-y-0.5',
         onClick && 'cursor-pointer',
         paddingMap[padding],
         className

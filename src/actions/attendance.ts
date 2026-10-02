@@ -1,34 +1,25 @@
 'use server';
 
-import { getSessionFromCookies } from '@/lib/session';
+import { requireAuthGuard } from '@/lib/auth-guard';
 import { AttendanceService } from '@/services/attendance.service';
 import { MarkDailyAttendanceSchema, type MarkDailyAttendanceInput } from '@/lib/validations/attendance';
-import { Role, type RoleType } from '@/types';
+import { Role } from '@/types';
 
 /**
  * Server Action for marking daily section attendance.
  * Validates session, checks role permissions, and runs atomic database transaction.
  */
 export async function markDailyAttendanceAction(input: MarkDailyAttendanceInput) {
-  // 1. Authenticate session
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
+  // 1. Authorize role (Teachers, Admins, Super Admins can mark attendance)
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
     return {
       success: false,
-      error: 'Unauthorized: Valid tenant session required.',
+      error: guard.error,
     };
   }
 
-  // 2. Authorize role (Teachers, Admins, Super Admins can mark attendance)
-  const allowedRoles: RoleType[] = [Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN];
-  if (!allowedRoles.includes(session.role)) {
-    return {
-      success: false,
-      error: 'Forbidden: Insufficient permissions to mark student attendance.',
-    };
-  }
-
-  // 3. Boundary Zod Validation
+  // 2. Boundary Zod Validation
   const validation = MarkDailyAttendanceSchema.safeParse(input);
   if (!validation.success) {
     const errorMsg = validation.error.errors.map((e) => e.message).join(', ');
@@ -38,11 +29,13 @@ export async function markDailyAttendanceAction(input: MarkDailyAttendanceInput)
     };
   }
 
+  const { tenantId, userId } = guard.context;
+
   try {
     const result = await AttendanceService.markDailyAttendance(
       validation.data,
-      session.tenantId,
-      session.sub
+      tenantId,
+      userId
     );
 
     return {
@@ -64,16 +57,16 @@ export async function markDailyAttendanceAction(input: MarkDailyAttendanceInput)
  * Server Action to retrieve the student roster and current attendance status for a section and date.
  */
 export async function getSectionAttendanceRosterAction(sectionId: string, dateStr: string) {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized: Active session required.' };
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
 
   try {
     const data = await AttendanceService.getSectionAttendanceRoster(
       sectionId,
       dateStr,
-      session.tenantId
+      guard.context.tenantId
     );
     return { success: true, data };
   } catch (err: unknown) {
@@ -86,13 +79,15 @@ export async function getSectionAttendanceRosterAction(sectionId: string, dateSt
  * Server Action to retrieve all sections assigned to the logged-in teacher.
  */
 export async function getTeacherSectionsAction() {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized: Active session required.' };
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
 
+  const { tenantId, userId } = guard.context;
+
   try {
-    const sections = await AttendanceService.getTeacherSections(session.sub, session.tenantId);
+    const sections = await AttendanceService.getTeacherSections(userId, tenantId);
     return { success: true, sections };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to load teacher sections.';
@@ -104,15 +99,17 @@ export async function getTeacherSectionsAction() {
  * Server Action to retrieve today's assigned periods and active substitution alerts for the logged-in teacher.
  */
 export async function getTeacherTodayScheduleAction() {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized: Active session required.' };
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { tenantId, userId } = guard.context;
 
   try {
     const scheduleData = await AttendanceService.getTeacherTodaySchedule(
-      session.sub,
-      session.tenantId,
+      userId,
+      tenantId,
       new Date()
     );
     return { success: true, ...scheduleData };
@@ -126,9 +123,9 @@ export async function getTeacherTodayScheduleAction() {
  * Server Action for faculty to acknowledge a substitution cover request.
  */
 export async function acknowledgeSubstitutionAction(substitutionId: string) {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized: Active session required.' };
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
 
   try {
@@ -136,7 +133,7 @@ export async function acknowledgeSubstitutionAction(substitutionId: string) {
     await prisma.teacherSubstitution.update({
       where: {
         id: substitutionId,
-        tenantId: session.tenantId,
+        tenantId: guard.context.tenantId,
       },
       data: {
         status: 'COMPLETED',
@@ -160,15 +157,12 @@ export async function acknowledgeSubstitutionAction(substitutionId: string) {
  * Blocks duplicate check-ins for the same day.
  */
 export async function markTeacherCheckInAction() {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized: Active session required.' };
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
 
-  const allowedRoles: RoleType[] = [Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN];
-  if (!allowedRoles.includes(session.role)) {
-    return { success: false, error: 'Forbidden: Only teachers can check in.' };
-  }
+  const { tenantId, userId } = guard.context;
 
   try {
     const { prisma } = await import('@/lib/db');
@@ -178,8 +172,8 @@ export async function markTeacherCheckInAction() {
     // Check if already checked in today
     const existing = await prisma.staffAttendance.findFirst({
       where: {
-        tenantId: session.tenantId,
-        userId: session.sub,
+        tenantId,
+        userId,
         date: today,
       },
     });
@@ -197,8 +191,8 @@ export async function markTeacherCheckInAction() {
     const now = new Date();
     const record = await prisma.staffAttendance.create({
       data: {
-        tenantId: session.tenantId,
-        userId: session.sub,
+        tenantId,
+        userId,
         date: today,
         status: 'PRESENT',
         checkInTime: now,
@@ -219,10 +213,12 @@ export async function markTeacherCheckInAction() {
  * Teacher check-out: updates checkOutTime on today's StaffAttendance.
  */
 export async function markTeacherCheckOutAction() {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized: Active session required.' };
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { tenantId, userId } = guard.context;
 
   try {
     const { prisma } = await import('@/lib/db');
@@ -231,8 +227,8 @@ export async function markTeacherCheckOutAction() {
 
     const existing = await prisma.staffAttendance.findFirst({
       where: {
-        tenantId: session.tenantId,
-        userId: session.sub,
+        tenantId,
+        userId,
         date: today,
       },
     });
@@ -266,10 +262,12 @@ export async function markTeacherCheckOutAction() {
  * Get teacher's attendance summary for a specific month.
  */
 export async function getTeacherAttendanceSummaryAction(month?: number, year?: number) {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireAuthGuard([Role.TEACHER, Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { tenantId, userId } = guard.context;
 
   try {
     const { prisma } = await import('@/lib/db');
@@ -282,8 +280,8 @@ export async function getTeacherAttendanceSummaryAction(month?: number, year?: n
 
     const records = await prisma.staffAttendance.findMany({
       where: {
-        tenantId: session.tenantId,
-        userId: session.sub,
+        tenantId,
+        userId,
         date: { gte: startDate, lte: endDate },
       },
       orderBy: { date: 'asc' },
@@ -336,18 +334,48 @@ export async function getTeacherAttendanceSummaryAction(month?: number, year?: n
  * Get student's attendance summary: overall stats, subject-wise, and day-by-day.
  */
 export async function getStudentAttendanceSummaryAction(studentId: string) {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId) {
-    return { success: false, error: 'Unauthorized' };
+  const guard = await requireAuthGuard();
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { tenantId, userId, role } = guard.context;
 
   try {
     const { prisma } = await import('@/lib/db');
 
+    // 1. Verify student exists in current tenant
+    const student = await prisma.studentProfile.findFirst({
+      where: { id: studentId, tenantId },
+      select: { id: true, userId: true, sectionId: true },
+    });
+
+    if (!student) {
+      return { success: false, error: 'Student not found in this institution.' };
+    }
+
+    // 2. IDOR Protection: verify caller has authority to view this student
+    if (role === Role.STUDENT) {
+      if (student.userId !== userId) {
+        return { success: false, error: 'Forbidden: You can only view your own attendance records.' };
+      }
+    } else if (role === Role.PARENT) {
+      const isParentOfStudent = await prisma.parentStudentLink.findFirst({
+        where: {
+          tenantId,
+          studentId,
+          parent: { userId },
+        },
+      });
+      if (!isParentOfStudent) {
+        return { success: false, error: 'Forbidden: You can only view attendance for your linked children.' };
+      }
+    }
+
     // Get all attendance records for this student
     const records = await prisma.studentAttendance.findMany({
       where: {
-        tenantId: session.tenantId,
+        tenantId,
         studentId,
       },
       orderBy: { date: 'asc' },
@@ -370,18 +398,12 @@ export async function getStudentAttendanceSummaryAction(studentId: string) {
     // Subject-wise breakdown (period-based attendance)
     const periodRecords = records.filter(r => r.period !== null);
 
-    // Get timetable entries to map periods to subjects
-    const student = await prisma.studentProfile.findUnique({
-      where: { id: studentId },
-      select: { sectionId: true },
-    });
-
     let subjectWise: Array<{ subjectName: string; subjectCode: string; total: number; present: number; percentage: number }> = [];
 
     if (student?.sectionId) {
       const timetableEntries = await prisma.timetableEntry.findMany({
         where: {
-          tenantId: session.tenantId,
+          tenantId,
           sectionId: student.sectionId,
           subjectId: { not: null },
         },
@@ -435,10 +457,12 @@ export async function getStudentAttendanceSummaryAction(studentId: string) {
  * Admin overview: today's totals, classes not marked, class-wise breakdown, 7-day trend.
  */
 export async function getAdminAttendanceOverviewAction() {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
-    return { success: false, error: 'Unauthorized: Admin privileges required.' };
+  const guard = await requireAuthGuard([Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { tenantId } = guard.context;
 
   try {
     const { prisma } = await import('@/lib/db');
@@ -448,7 +472,7 @@ export async function getAdminAttendanceOverviewAction() {
 
     // Get all sections with class info
     const sections = await prisma.section.findMany({
-      where: { tenantId: session.tenantId },
+      where: { tenantId },
       include: {
         classGrade: { select: { name: true } },
         students: { select: { id: true } },
@@ -468,7 +492,7 @@ export async function getAdminAttendanceOverviewAction() {
     // Today's attendance records
     const todayRecords = await prisma.studentAttendance.findMany({
       where: {
-        tenantId: session.tenantId,
+        tenantId,
         date: { gte: todayStart, lte: todayEnd },
         period: null, // daily attendance only
       },
@@ -516,30 +540,43 @@ export async function getAdminAttendanceOverviewAction() {
       };
     });
 
-    // 7-day trend
+    // 7-day trend: Single batched date-range query (O(1) database round-trips instead of 7)
     const trend: Array<{ date: string; dayLabel: string; percentage: number; total: number; present: number }> = [];
     const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const sevenDaysAgoStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+    sevenDaysAgoStart.setHours(0, 0, 0, 0);
+
+    const allSevenDaysRecords = await prisma.studentAttendance.findMany({
+      where: {
+        tenantId,
+        date: { gte: sevenDaysAgoStart, lte: todayEnd },
+        period: null,
+      },
+      select: { status: true, date: true },
+    });
+
+    // Group records by YYYY-MM-DD
+    const recordsByDay = new Map<string, Array<{ status: string }>>();
+    for (const record of allSevenDaysRecords) {
+      const dayKey = record.date.toISOString().split('T')[0];
+      const list = recordsByDay.get(dayKey) || [];
+      list.push(record);
+      recordsByDay.set(dayKey, list);
+    }
 
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+      const dayKey = dayStart.toISOString().split('T')[0];
 
-      const dayRecords = await prisma.studentAttendance.findMany({
-        where: {
-          tenantId: session.tenantId,
-          date: { gte: dayStart, lte: dayEnd },
-          period: null,
-        },
-        select: { status: true },
-      });
-
+      const dayRecords = recordsByDay.get(dayKey) || [];
       const dayPresent = dayRecords.filter(r => r.status === 'PRESENT').length;
       const dayTotal = dayRecords.length;
 
       trend.push({
-        date: dayStart.toISOString().split('T')[0],
+        date: dayKey,
         dayLabel: dayLabels[dayStart.getDay()],
         percentage: dayTotal > 0 ? Math.round((dayPresent / dayTotal) * 100) : 0,
         total: dayTotal,
@@ -574,10 +611,12 @@ export async function exportAttendanceDataAction(
   endDate: string,
   format: 'csv' | 'xlsx' = 'csv'
 ) {
-  const session = await getSessionFromCookies();
-  if (!session || !session.tenantId || (session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN')) {
-    return { success: false, error: 'Unauthorized: Admin privileges required.' };
+  const guard = await requireAuthGuard([Role.ADMIN, Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { tenantId } = guard.context;
 
   try {
     const { prisma } = await import('@/lib/db');
@@ -588,7 +627,7 @@ export async function exportAttendanceDataAction(
 
     const records = await prisma.studentAttendance.findMany({
       where: {
-        tenantId: session.tenantId,
+        tenantId,
         date: { gte: start, lte: end },
         period: null,
       },

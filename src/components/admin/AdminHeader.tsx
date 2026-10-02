@@ -1,105 +1,141 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Menu, Bell, Search, LogOut, ShieldCheck, User } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Menu, Search, Bell, ChevronDown, LogOut, User, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
 import { logoutAction } from '@/actions/auth';
+import AdminAvatar from './illustrations/AdminAvatar';
+import NotificationBellDropdown from '@/components/notifications/NotificationBellDropdown';
 
 interface AdminHeaderProps {
   onToggleSidebar: () => void;
-  adminName: string;
-  adminEmail: string;
-  role: string;
+  adminName?: string;
+  adminEmail?: string;
+  role?: string;
 }
 
 export default function AdminHeader({
   onToggleSidebar,
-  adminName,
-  adminEmail,
-  role,
+  adminName = 'Admin',
+  adminEmail = 'admin@dpsdelhi.edu.in',
+  role = 'ADMIN',
 }: AdminHeaderProps) {
+  const [searchValue, setSearchValue] = useState('');
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSignOut = async () => {
     setIsLoggingOut(true);
     await logoutAction();
   };
 
-  const todayStr = new Intl.DateTimeFormat('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date());
-
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-[#EBF0F5] px-4 md:px-8 py-3.5 flex items-center justify-between shadow-2xs">
-      {/* Left: Mobile Sidebar Hamburger & Date / Breadcrumb */}
-      <div className="flex items-center gap-3 md:gap-4">
+    <header className="w-full flex items-center justify-between gap-4 py-2 px-1">
+      {/* Left: Mobile hamburger & Search bar */}
+      <div className="flex items-center gap-3 flex-1 max-w-xl">
         <button
           onClick={onToggleSidebar}
-          className="p-2 rounded-xl text-slate-600 hover:text-[#111C2D] hover:bg-slate-100 lg:hidden transition-colors"
+          className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 lg:hidden transition-colors shadow-2xs bg-white"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#111C2D]">Delhi Public School</span>
-            <span className="text-xs text-slate-300">•</span>
-            <span className="text-xs font-semibold text-[#FF7555] bg-[#FFF2EE] px-2.5 py-0.5 rounded-full">
-              Operations Center
-            </span>
-          </div>
-          <p className="text-[11px] text-slate-500 font-medium hidden sm:block mt-0.5">
-            {todayStr} • Term 1 Session Active
-          </p>
+        {/* Global Search Bar (White Rounded Pill) */}
+        <div className="relative flex items-center bg-white rounded-full border border-white/80 shadow-[0_2px_12px_rgba(0,0,0,0.04)] px-4 py-2.5 w-full max-w-md focus-within:ring-2 focus-within:ring-[#0B72E7]/15 focus-within:border-[#0B72E7] transition-all">
+          <Search className="w-4 h-4 text-slate-400 shrink-0 mr-3" />
+          <input
+            type="text"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Search students, teachers, classes, etc..."
+            className="w-full text-[12.5px] text-slate-800 placeholder:text-slate-400 bg-transparent outline-none font-normal"
+          />
         </div>
       </div>
 
-      {/* Right: Quick Search, Bell, Profile & Sign Out */}
-      <div className="flex items-center gap-3 md:gap-5">
-        {/* Quick Search */}
-        <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F4F8FA] border border-[#D9E2EC] text-slate-500 text-xs w-48 lg:w-64 focus-within:border-[#FF7555] focus-within:bg-white transition-all">
-          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search student, adm no, staff..."
-            className="bg-transparent border-none outline-none w-full text-xs text-[#111C2D] placeholder:text-slate-400"
-          />
+      {/* Right: Notifications & Profile Pill */}
+      <div className="flex items-center gap-4 shrink-0">
+        {/* Notification Bell Dropdown */}
+        <div className="relative">
+          <NotificationBellDropdown notificationsPageUrl="/admin/notifications" />
         </div>
 
-        {/* Notification Bell */}
-        <button
-          aria-label="View notifications"
-          className="relative p-2 rounded-xl text-slate-500 hover:text-[#111C2D] hover:bg-slate-100 transition-colors"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#FF7555] ring-2 ring-white" />
-        </button>
-
-        {/* Admin Profile Chip */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-          <div className="w-8 h-8 rounded-full bg-[#111C2D] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-            {adminName.charAt(0)}
-          </div>
-          <div className="hidden sm:flex flex-col text-left">
-            <span className="text-xs font-bold text-[#111C2D] leading-tight truncate max-w-[130px]">
-              {adminName}
-            </span>
-            <span className="text-[10px] text-slate-500 font-medium leading-tight">
-              {role === 'ADMIN' ? 'School Administrator' : 'Platform SuperAdmin'}
-            </span>
-          </div>
-
+        {/* Admin Profile Area */}
+        <div className="relative" ref={dropdownRef}>
           <button
-            onClick={handleSignOut}
-            disabled={isLoggingOut}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-[#FF7555] hover:bg-[#FFF2EE] transition-colors ml-1 disabled:opacity-50"
-            title="Sign Out of Admin Console"
+            type="button"
+            onClick={() => setProfileDropdownOpen((prev) => !prev)}
+            className="flex items-center gap-3 p-1 sm:pr-2.5 rounded-full hover:bg-white/70 transition-all cursor-pointer group"
           >
-            <LogOut className="w-4 h-4" />
+            {/* Illustrated Admin Avatar */}
+            <AdminAvatar size={38} />
+
+            {/* Admin Name & Subtitle */}
+            <div className="hidden sm:flex flex-col text-left">
+              <span className="text-[13px] font-bold text-slate-900 leading-tight">
+                {adminName}
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium leading-tight">
+                {role === 'SUPER_ADMIN' ? 'Platform SuperAdmin' : 'School Administrator'}
+              </span>
+            </div>
+
+            {/* Dropdown Chevron */}
+            <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform ml-0.5" />
           </button>
+
+          {/* Profile Dropdown Menu */}
+          {profileDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.12)] border border-slate-100 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-4 py-2.5 border-b border-slate-100">
+                <p className="text-xs font-bold text-slate-900">{adminName}</p>
+                <p className="text-[11px] text-slate-400 truncate">{adminEmail}</p>
+              </div>
+
+              <div className="py-1">
+                <Link
+                  href="/admin/settings"
+                  onClick={() => setProfileDropdownOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <User className="w-4 h-4 text-slate-400" />
+                  <span>Admin Profile</span>
+                </Link>
+                <Link
+                  href="/admin/audit"
+                  onClick={() => setProfileDropdownOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <ShieldCheck className="w-4 h-4 text-slate-400" />
+                  <span>Security & Audit</span>
+                </Link>
+              </div>
+
+              <div className="border-t border-slate-100 pt-1">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={isLoggingOut}
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

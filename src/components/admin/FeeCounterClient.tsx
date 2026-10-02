@@ -18,7 +18,7 @@ import {
   ChevronRight,
   TrendingUp,
 } from 'lucide-react';
-import { collectCounterFeeAction, generateQuarterlyInvoicesAction } from '@/actions/admin';
+import { collectCounterFeeAction, generateQuarterlyInvoicesAction } from '@/actions/admin/fees';
 import { PaymentMethod } from '@prisma/client';
 
 export interface InvoiceItem {
@@ -304,7 +304,7 @@ export default function FeeCounterClient({
               setPaymentError(null);
               setIsCounterOpen(true);
             }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#FF7555] hover:bg-[#ff623d] text-white font-medium text-sm rounded-xl shadow-sm transition-all transform active:scale-95"
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#0B72E7] hover:bg-[#0960C4] text-white font-medium text-sm rounded-xl shadow-sm transition-all transform active:scale-95"
           >
             <CreditCard className="w-4 h-4" />
             + Record Counter Payment
@@ -450,7 +450,7 @@ export default function FeeCounterClient({
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
               />
             </div>
           </div>
@@ -645,7 +645,7 @@ export default function FeeCounterClient({
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#FF7555]/10 text-[#FF7555] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-[#0B72E7]/10 text-[#0B72E7] flex items-center justify-center">
                   <CreditCard className="w-5 h-5" />
                 </div>
                 <div>
@@ -754,7 +754,7 @@ export default function FeeCounterClient({
                             setSelectedInvoice(null);
                           }
                         }}
-                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                       />
                     </div>
 
@@ -778,7 +778,7 @@ export default function FeeCounterClient({
                                 {s.admissionNumber} • {s.className}
                               </div>
                             </div>
-                            <span className="text-[11px] text-[#FF7555] font-semibold flex items-center gap-1">
+                            <span className="text-[11px] text-[#0B72E7] font-semibold flex items-center gap-1">
                               Select <ChevronRight className="w-3 h-3" />
                             </span>
                           </button>
@@ -810,7 +810,7 @@ export default function FeeCounterClient({
                               onClick={() => handleSelectInvoice(inv)}
                               className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
                                 selectedInvoice?.id === inv.id
-                                  ? 'border-[#FF7555] bg-[#FF7555]/5 shadow-xs'
+                                  ? 'border-[#0B72E7] bg-[#0B72E7]/5 shadow-xs'
                                   : 'border-slate-200 bg-white hover:border-slate-300'
                               }`}
                             >
@@ -848,7 +848,7 @@ export default function FeeCounterClient({
                                 max={selectedInvoice.balanceAmount}
                                 value={paymentAmount}
                                 onChange={(e) => setPaymentAmount(e.target.value)}
-                                className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                                className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                                 required
                               />
                             </div>
@@ -859,7 +859,7 @@ export default function FeeCounterClient({
                             <select
                               value={paymentMethod}
                               onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                             >
                               <option value="CASH">Cash at Counter</option>
                               <option value="POS">POS / Card Swipe</option>
@@ -880,14 +880,14 @@ export default function FeeCounterClient({
                           placeholder="e.g. Counter Cash Paid by Father"
                           value={paymentRemarks}
                           onChange={(e) => setPaymentRemarks(e.target.value)}
-                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                         />
                       </div>
 
                       <button
                         type="submit"
                         disabled={isSubmittingPayment}
-                        className="w-full py-3 bg-[#FF7555] hover:bg-[#ff623d] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-3 bg-[#0B72E7] hover:bg-[#0960C4] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         {isSubmittingPayment ? (
                           <>
@@ -955,7 +955,7 @@ export default function FeeCounterClient({
                 <select
                   value={batchYearId}
                   onChange={(e) => setBatchYearId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                 >
                   {academicYears.map((ay) => (
                     <option key={ay.id} value={ay.id}>
@@ -970,7 +970,7 @@ export default function FeeCounterClient({
                 <select
                   value={batchGradeId}
                   onChange={(e) => setBatchGradeId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                 >
                   {classGrades.map((cg) => (
                     <option key={cg.id} value={cg.id}>
@@ -985,7 +985,7 @@ export default function FeeCounterClient({
                 <select
                   value={batchTermId}
                   onChange={(e) => setBatchTermId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                 >
                   {feeTerms.map((ft) => (
                     <option key={ft.id} value={ft.id}>

@@ -26,7 +26,7 @@ import {
   generateTeacherTemplateAction,
   importStudentsBatchAction,
   importTeachersBatchAction,
-} from '@/actions/admin';
+} from '@/actions/admin/import';
 
 type ImportType = 'STUDENTS' | 'TEACHERS';
 

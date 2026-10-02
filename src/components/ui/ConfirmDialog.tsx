@@ -19,21 +19,21 @@ export interface ConfirmDialogProps {
 const variantConfig = {
   danger: {
     icon: Trash2,
-    iconBg: 'bg-red-100',
-    iconColor: 'text-red-600',
-    confirmBtn: 'bg-red-600 hover:bg-red-700 focus-visible:outline-red-600',
+    iconBg: 'bg-rose-100',
+    iconColor: 'text-rose-600',
+    confirmBtn: 'bg-rose-600 hover:bg-rose-700 text-white',
   },
   warning: {
     icon: AlertTriangle,
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-600',
-    confirmBtn: 'bg-amber-600 hover:bg-amber-700 focus-visible:outline-amber-600',
+    confirmBtn: 'bg-amber-600 hover:bg-amber-700 text-white',
   },
   info: {
     icon: Info,
     iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    confirmBtn: 'bg-blue-600 hover:bg-blue-700 focus-visible:outline-blue-600',
+    iconColor: 'text-[#0B72E7]',
+    confirmBtn: 'bg-[#0B72E7] hover:bg-[#0960C4] text-white',
   },
 };
 
@@ -58,15 +58,14 @@ export default function ConfirmDialog({
     } else {
       document.body.style.overflow = '';
     }
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !isLoading) onClose();
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isLoading) onClose();
     };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleEscape);
+    };
   }, [isOpen, isLoading, onClose]);
 
   if (!isOpen) return null;
@@ -75,31 +74,40 @@ export default function ConfirmDialog({
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === overlayRef.current && !isLoading) onClose(); }}
+      onClick={(e) => {
+        if (e.target === overlayRef.current && !isLoading) onClose();
+      }}
     >
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity" />
+      <div className="relative bg-white rounded-[24px] shadow-[0_20px_60px_rgba(15,23,42,0.15)] border border-slate-100 max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200 z-10">
         <button
           onClick={onClose}
           disabled={isLoading}
-          className="absolute top-4 right-4 text-brand-muted hover:text-brand-dark transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
         <div className="flex items-start gap-4">
-          <div className={clsx('flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center', config.iconBg)}>
+          <div
+            className={clsx(
+              'shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center shadow-xs',
+              config.iconBg
+            )}
+          >
             <IconComponent className={clsx('w-5 h-5', config.iconColor)} />
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-section-header text-brand-dark">{title}</h3>
-            {description && <p className="mt-2 text-body-primary text-brand-muted">{description}</p>}
+          <div className="flex-1 min-w-0 pr-4">
+            <h3 className="text-base font-bold text-slate-900">{title}</h3>
+            {description && (
+              <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">{description}</p>
+            )}
           </div>
         </div>
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-6 flex justify-end gap-2.5">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-body-primary font-medium text-brand-dark bg-white border border-brand-border rounded-lg hover:bg-brand-subtle transition-colors"
+            className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
           >
             {cancelLabel}
           </button>
@@ -107,12 +115,12 @@ export default function ConfirmDialog({
             onClick={onConfirm}
             disabled={isLoading}
             className={clsx(
-              'px-4 py-2 text-body-primary font-medium text-white rounded-lg transition-colors inline-flex items-center gap-2',
+              'px-4 py-2 text-xs font-semibold rounded-xl shadow-xs transition-colors inline-flex items-center gap-2 cursor-pointer',
               config.confirmBtn,
               isLoading && 'opacity-70 cursor-not-allowed'
             )}
           >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {confirmLabel}
           </button>
         </div>

@@ -29,7 +29,7 @@ import {
   getAvailableSubstitutesAction,
   assignTeacherSubstitutionAction,
   cancelTeacherSubstitutionAction,
-} from '@/actions/admin';
+} from '@/actions/admin/substitutions';
 
 interface TeacherItem {
   id: string;
@@ -259,7 +259,7 @@ export default function SubstitutionManagerClient({
                 className="text-xs font-semibold text-slate-800 outline-none bg-transparent"
               />
               {dayOfWeekName && (
-                <span className="text-[11px] font-bold text-[#FA896B] uppercase tracking-wider px-1.5 py-0.5 bg-orange-50 rounded">
+                <span className="text-[11px] font-bold text-[#0B72E7] uppercase tracking-wider px-1.5 py-0.5 bg-orange-50 rounded">
                   {dayOfWeekName}
                 </span>
               )}
@@ -353,7 +353,7 @@ export default function SubstitutionManagerClient({
 
         {isLoading ? (
           <div className="p-12 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200 flex flex-col items-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-[#FA896B]" />
+            <RefreshCw className="w-6 h-6 animate-spin text-[#0B72E7]" />
             <span>Fetching schedule for {selectedDate}...</span>
           </div>
         ) : affectedEntries.length === 0 ? (
@@ -422,7 +422,7 @@ export default function SubstitutionManagerClient({
                         </span>
                       </div>
                       <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mt-1">
-                        <BookOpen className="w-3.5 h-3.5 text-[#FA896B]" />
+                        <BookOpen className="w-3.5 h-3.5 text-[#0B72E7]" />
                         <span>{entry.subject?.name || 'Class Period'}</span>
                         {entry.subject?.code && (
                           <span className="text-slate-400">({entry.subject.code})</span>
@@ -486,7 +486,7 @@ export default function SubstitutionManagerClient({
                           <button
                             type="button"
                             onClick={() => fetchAvailableSubstitutes(slotId)}
-                            className="text-[11px] text-[#FA896B] hover:underline"
+                            className="text-[11px] text-[#0B72E7] hover:underline"
                           >
                             {isLoadingSlotTeachers ? 'Checking free faculty...' : 'Check Available Teachers'}
                           </button>

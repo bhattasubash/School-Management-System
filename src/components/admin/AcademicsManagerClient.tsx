@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import {
   CalendarDays,
   Clock,
@@ -16,8 +17,14 @@ import {
   BookOpen,
   ArrowRight,
   ShieldAlert,
+  Building2,
+  Users,
 } from 'lucide-react';
-import { assignTeacherSubstitutionAction, cancelTeacherSubstitutionAction } from '@/actions/admin';
+import PageHeader from '@/components/ui/PageHeader';
+import AdminCard from './ui/AdminCard';
+import AdminButton from './ui/AdminButton';
+import AdminModal from './ui/AdminModal';
+import { assignTeacherSubstitutionAction, cancelTeacherSubstitutionAction } from '@/actions/admin/substitutions';
 import { DayOfWeek } from '@prisma/client';
 
 export interface TimetableSlotItem {
@@ -104,10 +111,13 @@ export default function AcademicsManagerClient({
       .sort((a, b) => a.order - b.order);
   }, [timetableSlots, selectedSectionId, selectedDay]);
 
+  const activeSubsCount = useMemo(() => {
+    return recentSubstitutions.filter((s) => s.status === 'ASSIGNED').length;
+  }, [recentSubstitutions]);
+
   // Open modal for a specific slot
   const openAssignModal = (slot: TimetableSlotItem) => {
     setTargetSlot(slot);
-    // Default to first teacher who isn't the primary teacher
     const candidate = teachers.find((t) => t.id !== slot.teacherId);
     setSubTeacherId(candidate?.id || '');
     setSubReason('Emergency substitution assigned by administration');
@@ -138,43 +148,40 @@ export default function AcademicsManagerClient({
 
     if (res.success && res.substitution) {
       const subTeacher = teachers.find((t) => t.id === subTeacherId);
+      const newSub: SubstitutionItem = {
+        id: res.substitution.id,
+        date: subDate,
+        timetableEntryId: targetSlot.id,
+        periodName: targetSlot.periodName,
+        timeRange: `${targetSlot.startTime} - ${targetSlot.endTime}`,
+        classSection: `${targetSlot.classGradeName}-${targetSlot.sectionName}`,
+        subjectName: targetSlot.subjectName || 'General',
+        originalTeacherName: targetSlot.teacherName || 'Faculty',
+        substituteTeacherName: subTeacher?.name || 'Substitute',
+        reason: subReason,
+        status: 'ASSIGNED',
+      };
 
-      // Update local timetable slot state
+      setRecentSubstitutions((prev) => [newSub, ...prev]);
+
       setTimetableSlots((prev) =>
-        prev.map((s) =>
-          s.id === targetSlot.id
-            ? {
-                ...s,
-                activeSubstitution: {
-                  id: res.substitution.id,
-                  substituteTeacherId: subTeacherId,
-                  substituteTeacherName: subTeacher?.name || 'Substitute Teacher',
-                  reason: subReason,
-                  status: res.substitution.status,
-                  date: res.substitution.date,
-                },
-              }
-            : s
-        )
+        prev.map((s) => {
+          if (s.id === targetSlot.id) {
+            return {
+              ...s,
+              activeSubstitution: {
+                id: res.substitution.id,
+                substituteTeacherId: subTeacherId,
+                substituteTeacherName: subTeacher?.name || 'Substitute',
+                reason: subReason,
+                status: 'ASSIGNED',
+                date: subDate,
+              },
+            };
+          }
+          return s;
+        })
       );
-
-      // Add to recent substitutions table
-      setRecentSubstitutions((prev) => [
-        {
-          id: res.substitution.id,
-          date: subDate,
-          timetableEntryId: targetSlot.id,
-          periodName: targetSlot.periodName,
-          timeRange: `${targetSlot.startTime} - ${targetSlot.endTime}`,
-          classSection: `${targetSlot.classGradeName}-${targetSlot.sectionName}`,
-          subjectName: targetSlot.subjectName || 'General',
-          originalTeacherName: targetSlot.teacherName || 'Assigned Staff',
-          substituteTeacherName: subTeacher?.name || 'Substitute Teacher',
-          reason: subReason,
-          status: 'ASSIGNED',
-        },
-        ...prev,
-      ]);
 
       setIsAssignModalOpen(false);
       setTargetSlot(null);
@@ -183,9 +190,10 @@ export default function AcademicsManagerClient({
     }
   };
 
-  // Cancel substitution
+  // Cancel / Revoke substitution
   const handleCancelSubstitution = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel this substitution?')) return;
+    if (!confirm('Are you sure you want to revoke this substitution?')) return;
+
     setCancellingId(id);
     const res = await cancelTeacherSubstitutionAction(id);
     setCancellingId(null);
@@ -204,70 +212,133 @@ export default function AcademicsManagerClient({
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Academic Master Schedule
-            </span>
-            <span className="text-xs text-slate-500 font-medium">AY 2026-27</span>
+      {/* 1. Header with Breadcrumbs & Action */}
+      <PageHeader
+        title="Classes, Sections & Daily Schedule"
+        subtitle="Manage section period rosters, daily class timetables, and on-the-fly teacher substitution coverage."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Academics' },
+        ]}
+        actions={
+          <div className="flex items-center gap-2.5">
+            <Link href="/admin/timetable">
+              <AdminButton variant="secondary" icon={<Calendar className="w-3.5 h-3.5" />}>
+                Master Builder
+              </AdminButton>
+            </Link>
+            <Link href="/admin/teachers">
+              <AdminButton variant="primary" icon={<GraduationCap className="w-3.5 h-3.5" />}>
+                Faculty Directory
+              </AdminButton>
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold text-[#111C2D] tracking-tight">Timetable & Substitution Engine</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage section period schedules and assign instant teacher substitutions during faculty absence.
-          </p>
-        </div>
+        }
+      />
 
-        {/* Section Picker */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-slate-500">Class:</span>
-          <select
-            value={selectedSectionId}
-            onChange={(e) => setSelectedSectionId(e.target.value)}
-            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
-          >
-            {sections.map((sec) => (
-              <option key={sec.id} value={sec.id}>
-                {sec.classGradeName} - Section {sec.name}
-              </option>
+      {/* 2. KPI Metrics Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Sections</span>
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0B72E7] flex items-center justify-center font-bold">
+              <Building2 className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{sections.length}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Configured classrooms</p>
+        </AdminCard>
+
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Periods</span>
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-emerald-600 mt-2">{timetableSlots.length}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Weekly instruction slots</p>
+        </AdminCard>
+
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Substitutions</span>
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <UserCheck className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-amber-600 mt-2">{activeSubsCount}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Faculty covering classes</p>
+        </AdminCard>
+
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Faculty Available</span>
+            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-purple-600 mt-2">{teachers.length}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Teaching staff on roster</p>
+        </AdminCard>
+      </div>
+
+      {/* 3. Section Selector & Day Selector Bar */}
+      <AdminCard className="p-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Day of Week Navigation Strip */}
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            {DAYS_OF_WEEK.map((day) => (
+              <button
+                key={day}
+                onClick={() => setSelectedDay(day)}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
+                  selectedDay === day
+                    ? 'bg-[#0B72E7] text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {day.charAt(0) + day.slice(1).toLowerCase()}
+              </button>
             ))}
-          </select>
+          </div>
+
+          {/* Section Picker */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Class Section:</span>
+            <select
+              value={selectedSectionId}
+              onChange={(e) => setSelectedSectionId(e.target.value)}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#0B72E7] focus:outline-none transition-all shadow-xs"
+            >
+              {sections.map((sec) => (
+                <option key={sec.id} value={sec.id}>
+                  {sec.classGradeName} - Section {sec.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
+      </AdminCard>
 
-      {/* 2. Days of Week Navigation Strip */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-2 overflow-x-auto">
-        {DAYS_OF_WEEK.map((day) => (
-          <button
-            key={day}
-            onClick={() => setSelectedDay(day)}
-            className={`flex-1 min-w-[100px] py-2.5 text-xs font-semibold rounded-xl transition-all ${
-              selectedDay === day
-                ? 'bg-[#111C2D] text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {day.charAt(0) + day.slice(1).toLowerCase()}
-          </button>
-        ))}
-      </div>
-
-      {/* 3. Timetable Period Slots for Selected Day */}
+      {/* 4. Timetable Period Slots for Selected Day */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#111C2D] uppercase tracking-wider flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#FF7555]" />
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <Clock className="w-4 h-4 text-[#0B72E7]" />
             {selectedDay.charAt(0) + selectedDay.slice(1).toLowerCase()} Schedule Grid
           </h2>
-          <span className="text-xs text-slate-500">{currentSlots.length} Scheduled Periods</span>
+          <span className="text-xs font-semibold text-slate-400">{currentSlots.length} Scheduled Periods</span>
         </div>
 
         {currentSlots.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 text-slate-400 text-xs">
-            No timetable slots configured for {selectedDay}.
-          </div>
+          <AdminCard className="p-12 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0B72E7] flex items-center justify-center mx-auto mb-3">
+              <Calendar className="w-6 h-6" />
+            </div>
+            <p className="text-sm font-bold text-slate-800">No timetable slots configured for {selectedDay}</p>
+            <p className="text-xs text-slate-400 mt-1">Configure schedule in the Master Builder.</p>
+          </AdminCard>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {currentSlots.map((slot) => {
@@ -275,15 +346,15 @@ export default function AcademicsManagerClient({
                 return (
                   <div
                     key={slot.id}
-                    className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-5 flex items-center justify-between"
+                    className="bg-slate-50/80 border border-dashed border-slate-200 rounded-[20px] p-5 flex items-center justify-between"
                   >
                     <div>
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Interval
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Break Interval
                       </span>
                       <h4 className="text-sm font-bold text-slate-600">{slot.periodName}</h4>
                     </div>
-                    <span className="text-xs font-mono font-medium text-slate-500 bg-white px-3 py-1 rounded-xl border border-slate-200">
+                    <span className="text-xs font-mono font-bold text-slate-500 bg-white px-3 py-1 rounded-xl border border-slate-200/80 shadow-2xs">
                       {slot.startTime} - {slot.endTime}
                     </span>
                   </div>
@@ -291,38 +362,38 @@ export default function AcademicsManagerClient({
               }
 
               return (
-                <div
+                <AdminCard
                   key={slot.id}
-                  className={`bg-white rounded-2xl border p-5 shadow-sm transition-all flex flex-col justify-between ${
+                  className={`p-5 flex flex-col justify-between transition-all ${
                     slot.activeSubstitution
-                      ? 'border-amber-300 bg-amber-50/20'
-                      : 'border-slate-200/80 hover:border-slate-300'
+                      ? 'border-amber-200 bg-amber-50/20'
+                      : 'hover:shadow-[0_8px_30px_rgba(30,64,175,0.08)]'
                   }`}
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                         {slot.periodName}
                       </span>
-                      <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-2.5 py-0.5 rounded-lg">
+                      <span className="text-xs font-mono font-bold text-slate-700 bg-slate-50 px-2.5 py-0.5 rounded-lg border border-slate-100">
                         {slot.startTime} - {slot.endTime}
                       </span>
                     </div>
 
                     <div>
-                      <div className="text-sm font-extrabold text-[#111C2D]">
+                      <div className="text-sm font-bold text-slate-900">
                         {slot.subjectName || 'Self Study / Activity'}
                       </div>
                       {slot.subjectCode && (
-                        <span className="text-[11px] font-mono text-slate-400 block">{slot.subjectCode}</span>
+                        <span className="text-[11px] font-mono text-slate-400 block mt-0.5">{slot.subjectCode}</span>
                       )}
                     </div>
 
                     {/* Assigned Teacher */}
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                       <div>
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Faculty</span>
-                        <span className="font-semibold text-slate-800">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Faculty</span>
+                        <span className="font-bold text-slate-800">
                           {slot.teacherName || 'Not Assigned'}
                         </span>
                       </div>
@@ -330,51 +401,53 @@ export default function AcademicsManagerClient({
                       {/* Substitution Pill if Active */}
                       {slot.activeSubstitution ? (
                         <div className="text-right">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                            Sub: {slot.activeSubstitution.substituteTeacherName}
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            Covered by {slot.activeSubstitution.substituteTeacherName}
                           </span>
                         </div>
                       ) : (
-                        <button
+                        <AdminButton
+                          variant="secondary"
+                          size="sm"
                           onClick={() => openAssignModal(slot)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-white bg-slate-100 hover:bg-[#FF7555] rounded-lg transition-colors"
+                          icon={<UserCheck className="w-3.5 h-3.5" />}
                         >
-                          + Substitute
-                        </button>
+                          Substitute
+                        </AdminButton>
                       )}
                     </div>
                   </div>
-                </div>
+                </AdminCard>
               );
             })}
           </div>
         )}
       </div>
 
-      {/* 4. Active & Recent Substitutions Audit Feed */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+      {/* 5. Active & Recent Substitutions Audit Feed */}
+      <AdminCard className="p-0 overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-[#F8FAFC]">
           <div className="flex items-center gap-2">
-            <UserCheck className="w-4 h-4 text-emerald-600" />
-            <h3 className="text-sm font-bold text-[#111C2D]">Faculty Substitution Records</h3>
+            <UserCheck className="w-4 h-4 text-[#0B72E7]" />
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Faculty Substitution Records</h3>
           </div>
-          <span className="text-xs text-slate-500 font-medium">
+          <span className="text-xs text-slate-400 font-semibold">
             {recentSubstitutions.length} recorded substitutions
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+            <thead className="bg-[#F8FAFC] text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-100">
               <tr>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Period & Time</th>
-                <th className="py-3 px-4">Class & Subject</th>
-                <th className="py-3 px-4">Absent Teacher</th>
-                <th className="py-3 px-4">Substitute Teacher</th>
-                <th className="py-3 px-4">Reason</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Action</th>
+                <th className="py-3.5 px-5">Date</th>
+                <th className="py-3.5 px-4">Period & Time</th>
+                <th className="py-3.5 px-4">Class & Subject</th>
+                <th className="py-3.5 px-4">Absent Teacher</th>
+                <th className="py-3.5 px-4">Substitute Teacher</th>
+                <th className="py-3.5 px-4">Reason</th>
+                <th className="py-3.5 px-4 text-center">Status</th>
+                <th className="py-3.5 px-5 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -386,28 +459,28 @@ export default function AcademicsManagerClient({
                 </tr>
               ) : (
                 recentSubstitutions.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4 font-mono font-medium text-slate-900">
+                  <tr key={sub.id} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="py-3.5 px-5 font-mono font-bold text-slate-800">
                       {new Date(sub.date).toLocaleDateString('en-IN', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
                       })}
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{sub.periodName}</div>
-                      <div className="text-[11px] text-slate-500 font-mono">{sub.timeRange}</div>
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-slate-800">{sub.periodName}</div>
+                      <div className="text-[11px] text-slate-400 font-mono">{sub.timeRange}</div>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-800">{sub.subjectName}</div>
-                      <div className="text-[11px] text-slate-500">{sub.classSection}</div>
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-slate-800">{sub.subjectName}</div>
+                      <div className="text-[11px] text-slate-400">{sub.classSection}</div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600 line-through">{sub.originalTeacherName}</td>
-                    <td className="py-3 px-4 font-bold text-emerald-700">{sub.substituteTeacherName}</td>
-                    <td className="py-3 px-4 text-slate-600">{sub.reason || 'Leave'}</td>
-                    <td className="py-3 px-4 text-center">
+                    <td className="py-3.5 px-4 text-slate-400 line-through">{sub.originalTeacherName}</td>
+                    <td className="py-3.5 px-4 font-bold text-emerald-600">{sub.substituteTeacherName}</td>
+                    <td className="py-3.5 px-4 text-slate-500">{sub.reason || 'Leave'}</td>
+                    <td className="py-3.5 px-4 text-center">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           sub.status === 'ASSIGNED'
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : sub.status === 'COMPLETED'
@@ -418,12 +491,12 @@ export default function AcademicsManagerClient({
                         {sub.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-5 text-right">
                       {sub.status === 'ASSIGNED' && (
                         <button
                           onClick={() => handleCancelSubstitution(sub.id)}
                           disabled={cancellingId === sub.id}
-                          className="px-2.5 py-1 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors font-medium disabled:opacity-50"
+                          className="px-2.5 py-1 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition-colors font-bold disabled:opacity-50"
                         >
                           Revoke
                         </button>
@@ -435,114 +508,91 @@ export default function AcademicsManagerClient({
             </tbody>
           </table>
         </div>
-      </div>
+      </AdminCard>
 
-      {/* 5. MODAL: Assign Faculty Substitution */}
-      {isAssignModalOpen && targetSlot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <UserCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#111C2D]">Assign Teacher Substitution</h3>
-                  <p className="text-xs text-slate-500">
-                    {targetSlot.periodName} ({targetSlot.startTime} - {targetSlot.endTime}) • {targetSlot.subjectName}
-                  </p>
-                </div>
+      {/* 6. MODAL: Assign Faculty Substitution */}
+      <AdminModal
+        isOpen={isAssignModalOpen && Boolean(targetSlot)}
+        onClose={() => setIsAssignModalOpen(false)}
+        title="Assign Faculty Substitution"
+        description={targetSlot ? `${targetSlot.periodName} (${targetSlot.startTime} - ${targetSlot.endTime}) · ${targetSlot.subjectName}` : ''}
+        maxWidth="md"
+      >
+        {targetSlot && (
+          <form onSubmit={handleAssignSubstitution} className="space-y-4 text-xs">
+            {assignError && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-center gap-2 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{assignError}</span>
               </div>
-              <button
-                onClick={() => setIsAssignModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+            )}
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] text-slate-400 block font-medium">Absent Teacher:</span>
+                <span className="font-bold text-slate-900">{targetSlot.teacherName}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] text-slate-400 block font-medium">Class Section:</span>
+                <span className="font-bold text-slate-800">
+                  {targetSlot.classGradeName}-{targetSlot.sectionName}
+                </span>
+              </div>
             </div>
 
-            <form onSubmit={handleAssignSubstitution} className="p-6 space-y-4 text-xs">
-              {assignError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{assignError}</span>
-                </div>
-              )}
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Substitution Date</label>
+              <input
+                type="date"
+                value={subDate}
+                onChange={(e) => setSubDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 font-semibold focus:border-[#0B72E7] focus:outline-none"
+                required
+              />
+            </div>
 
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] text-slate-500 block">Absent Teacher:</span>
-                  <span className="font-bold text-slate-900">{targetSlot.teacherName}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[11px] text-slate-500 block">Class & Section:</span>
-                  <span className="font-semibold text-slate-800">
-                    {targetSlot.classGradeName}-{targetSlot.sectionName}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Substitution Date</label>
-                <input
-                  type="date"
-                  value={subDate}
-                  onChange={(e) => setSubDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Select Substitute Teacher</label>
-                <select
-                  value={subTeacherId}
-                  onChange={(e) => setSubTeacherId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
-                  required
-                >
-                  {teachers
-                    .filter((t) => t.id !== targetSlot.teacherId)
-                    .map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.department})
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="font-semibold text-slate-700 block mb-1">Reason for Substitution</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Medical leave, Emergency family duty"
-                  value={subReason}
-                  onChange={(e) => setSubReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3 bg-[#FF7555] hover:bg-[#ff623d] text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Select Substitute Teacher</label>
+              <select
+                value={subTeacherId}
+                onChange={(e) => setSubTeacherId(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 font-semibold focus:border-[#0B72E7] focus:outline-none"
+                required
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Recording Substitution...
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className="w-4 h-4" />
-                    Assign Substitution Now
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+                {teachers
+                  .filter((t) => t.id !== targetSlot.teacherId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.department})
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Reason for Substitution</label>
+              <input
+                type="text"
+                placeholder="e.g. Medical leave, Emergency duty"
+                value={subReason}
+                onChange={(e) => setSubReason(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 font-semibold focus:border-[#0B72E7] focus:outline-none"
+              />
+            </div>
+
+            <AdminButton
+              type="submit"
+              variant="primary"
+              disabled={isSubmitting}
+              isLoading={isSubmitting}
+              icon={<UserCheck className="w-4 h-4" />}
+              className="w-full py-3"
+            >
+              Assign Substitution Now
+            </AdminButton>
+          </form>
+        )}
+      </AdminModal>
     </div>
   );
 }

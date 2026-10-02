@@ -15,17 +15,22 @@ import {
   CheckCircle2,
   AlertCircle,
   Briefcase,
+  Heart,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   DataTable,
-  DataCard,
   PageHeader,
   StatusBadge,
   SearchableSelect,
   FormField,
   type Column,
 } from '@/components/ui';
-import { linkParentToStudentAction, unlinkParentAction } from '@/actions/admin';
+import AdminCard from './ui/AdminCard';
+import AdminButton from './ui/AdminButton';
+import AdminSearchInput from './ui/AdminSearchInput';
+import AdminModal from './ui/AdminModal';
+import { linkParentToStudentAction, unlinkParentAction } from '@/actions/admin/parents';
 
 export interface ParentDirectoryItem {
   id: string;
@@ -65,6 +70,15 @@ export default function ParentDirectoryClient({
   const [isPrimaryContact, setIsPrimaryContact] = useState(false);
   const [modalFeedback, setModalFeedback] = useState<{ success?: boolean; message?: string } | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Metrics
+  const metrics = useMemo(() => {
+    const total = parents.length;
+    const fathers = parents.filter((p) => p.relationship.toUpperCase() === 'FATHER').length;
+    const mothers = parents.filter((p) => p.relationship.toUpperCase() === 'MOTHER').length;
+    const linkedKids = parents.reduce((acc, p) => acc + p.studentsCount, 0);
+    return { total, fathers, mothers, linkedKids };
+  }, [parents]);
 
   const filteredParents = useMemo(() => {
     return parents.filter((p) => {
@@ -167,14 +181,14 @@ export default function ParentDirectoryClient({
         const item = row as unknown as ParentDirectoryItem;
         return (
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-brand-light text-brand-primary flex items-center justify-center font-bold text-sm">
+            <div className="w-10 h-10 rounded-full bg-blue-50 text-[#0B72E7] border border-blue-100 flex items-center justify-center font-bold text-sm shadow-xs">
               {item.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="font-semibold text-brand-dark">{item.name}</p>
-              <div className="flex items-center gap-2 text-[11px] text-brand-muted mt-0.5">
+              <p className="font-bold text-slate-900 leading-tight">{item.name}</p>
+              <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
                 <span className="flex items-center gap-1">
-                  <Mail className="w-3 h-3" />
+                  <Mail className="w-3 h-3 text-slate-400" />
                   {item.email}
                 </span>
               </div>
@@ -187,8 +201,8 @@ export default function ParentDirectoryClient({
       key: 'phone',
       label: 'Phone Number',
       render: (val) => (
-        <span className="inline-flex items-center gap-1.5 text-caption font-medium text-brand-dark">
-          <Phone className="w-3.5 h-3.5 text-brand-muted" />
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+          <Phone className="w-3.5 h-3.5 text-[#0B72E7]" />
           {String(val || 'N/A')}
         </span>
       ),
@@ -197,14 +211,24 @@ export default function ParentDirectoryClient({
       key: 'relationship',
       label: 'Relation',
       sortable: true,
-      render: (val) => <StatusBadge status={String(val || 'GUARDIAN')} size="sm" />,
+      render: (val) => {
+        const rel = String(val || 'GUARDIAN').toUpperCase();
+        let badgeColor = 'bg-blue-50 text-blue-700 border-blue-200/60';
+        if (rel === 'MOTHER') badgeColor = 'bg-purple-50 text-purple-700 border-purple-200/60';
+        if (rel === 'FATHER') badgeColor = 'bg-sky-50 text-sky-700 border-sky-200/60';
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badgeColor}`}>
+            {rel}
+          </span>
+        );
+      },
     },
     {
       key: 'occupation',
       label: 'Occupation',
       render: (val) => (
-        <span className="text-caption text-brand-muted inline-flex items-center gap-1">
-          <Briefcase className="w-3.5 h-3.5 text-brand-muted/70" />
+        <span className="text-xs text-slate-500 inline-flex items-center gap-1.5 font-medium">
+          <Briefcase className="w-3.5 h-3.5 text-slate-400" />
           {String(val || 'Not specified')}
         </span>
       ),
@@ -215,25 +239,25 @@ export default function ParentDirectoryClient({
       render: (_, row) => {
         const item = row as unknown as ParentDirectoryItem;
         if (item.linkedStudents.length === 0) {
-          return <span className="text-caption text-brand-muted italic">No students linked</span>;
+          return <span className="text-xs text-slate-400 italic">No students linked</span>;
         }
         return (
           <div className="flex flex-wrap gap-1.5">
             {item.linkedStudents.map((child) => (
               <span
                 key={child.id}
-                className="inline-flex items-center gap-1 text-[11px] font-medium bg-brand-subtle border border-brand-border px-2 py-0.5 rounded-md text-brand-dark"
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-[#EBF5FF] text-[#0B72E7] border border-[#BFDBFE] px-2.5 py-1 rounded-full shadow-2xs"
               >
-                <GraduationCap className="w-3 h-3 text-brand-primary" />
+                <GraduationCap className="w-3 h-3 text-[#0B72E7]" />
                 <span>{child.name}</span>
-                <span className="text-brand-muted">({child.classSection})</span>
+                <span className="text-blue-500/80 font-normal">({child.classSection})</span>
                 <button
                   type="button"
                   onClick={() => handleUnlink(item.id, child.id)}
                   title="Unlink student"
-                  className="ml-1 text-brand-muted hover:text-red-600 transition-colors"
+                  className="ml-1 text-blue-400 hover:text-red-500 transition-colors"
                 >
-                  <X className="w-2.5 h-2.5" />
+                  <X className="w-3 h-3" />
                 </button>
               </span>
             ))}
@@ -247,18 +271,18 @@ export default function ParentDirectoryClient({
       render: (_, row) => {
         const item = row as unknown as ParentDirectoryItem;
         return (
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            size="sm"
             onClick={() => {
               setSelectedParent(item);
               setLinkStudentId('');
               setModalFeedback(null);
             }}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-subtle hover:bg-brand-primary hover:text-white text-brand-dark text-caption font-semibold transition-all border border-brand-border"
+            icon={<LinkIcon className="w-3.5 h-3.5" />}
           >
-            <LinkIcon className="w-3.5 h-3.5" />
             Link Child
-          </button>
+          </AdminButton>
         );
       },
     },
@@ -266,6 +290,7 @@ export default function ParentDirectoryClient({
 
   return (
     <div className="space-y-6">
+      {/* 1. Page Header */}
       <PageHeader
         title="Parents & Guardians Directory"
         subtitle="Manage parental contacts, relationship links, emergency contact records, and multi-child sibling associations."
@@ -275,26 +300,70 @@ export default function ParentDirectoryClient({
         ]}
       />
 
-      {/* Filter and Search Bar */}
-      <DataCard padding="sm">
+      {/* 2. KPI Metrics Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Guardians</span>
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#0B72E7] flex items-center justify-center font-bold">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-2">{metrics.total}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Registered parent accounts</p>
+        </AdminCard>
+
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Fathers Registered</span>
+            <div className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-sky-600 mt-2">{metrics.fathers}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Primary paternal guardians</p>
+        </AdminCard>
+
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Mothers Registered</span>
+            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+              <Heart className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-purple-600 mt-2">{metrics.mothers}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Primary maternal guardians</p>
+        </AdminCard>
+
+        <AdminCard className="p-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Linked Students</span>
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-emerald-600 mt-2">{metrics.linkedKids}</div>
+          <p className="text-xs font-medium text-slate-400 mt-1">Active sibling links established</p>
+        </AdminCard>
+      </div>
+
+      {/* 3. Search & Filter Bar */}
+      <AdminCard className="p-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-brand-muted absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
+          <div className="w-full sm:w-80">
+            <AdminSearchInput
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={setSearchTerm}
               placeholder="Search parent name, student, phone..."
-              className="w-full pl-9 pr-3 py-2 text-body-primary rounded-lg border border-brand-border focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20 outline-none"
             />
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-caption text-brand-muted font-medium">Relationship:</span>
+            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Relationship:</span>
             <select
               value={relationshipFilter}
               onChange={(e) => setRelationshipFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-brand-border bg-white text-body-primary text-brand-dark focus:border-brand-primary outline-none"
+              className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 focus:border-[#0B72E7] focus:outline-none transition-all shadow-xs"
             >
               <option value="ALL">All Relationships</option>
               <option value="FATHER">Father</option>
@@ -303,9 +372,9 @@ export default function ParentDirectoryClient({
             </select>
           </div>
         </div>
-      </DataCard>
+      </AdminCard>
 
-      {/* Data Table */}
+      {/* 4. Data Table */}
       <DataTable
         columns={columns}
         data={filteredParents as unknown as Record<string, unknown>[]}
@@ -318,90 +387,73 @@ export default function ParentDirectoryClient({
         }}
       />
 
-      {/* LINK STUDENT MODAL */}
-      {selectedParent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative animate-in fade-in zoom-in-95 duration-200">
-            <button
+      {/* 5. LINK STUDENT MODAL */}
+      <AdminModal
+        isOpen={Boolean(selectedParent)}
+        onClose={() => setSelectedParent(null)}
+        title="Link Student to Parent Profile"
+        description={selectedParent ? `Associating student with ${selectedParent.name} (${selectedParent.relationship})` : ''}
+        maxWidth="md"
+        footer={
+          <div className="flex justify-end gap-2.5 w-full">
+            <AdminButton
+              variant="secondary"
               onClick={() => setSelectedParent(null)}
-              className="absolute top-4 right-4 p-1 rounded-lg text-brand-muted hover:text-brand-dark transition-colors"
             >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-brand-light flex items-center justify-center text-brand-primary">
-                <LinkIcon className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-section-header text-brand-dark">Link Student to Parent</h3>
-                <p className="text-caption text-brand-muted">
-                  Associating with {selectedParent.name} ({selectedParent.relationship})
-                </p>
-              </div>
+              Cancel
+            </AdminButton>
+            <AdminButton
+              variant="primary"
+              disabled={!linkStudentId || isPending}
+              isLoading={isPending}
+              onClick={handleLinkStudent}
+            >
+              Confirm Link
+            </AdminButton>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {modalFeedback && (
+            <div
+              className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
+                modalFeedback.success
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}
+            >
+              {modalFeedback.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              )}
+              <span>{modalFeedback.message}</span>
             </div>
+          )}
 
-            {modalFeedback && (
-              <div
-                className={`mb-4 p-3 rounded-lg text-caption font-medium flex items-center gap-2 ${
-                  modalFeedback.success
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                    : 'bg-red-50 text-red-700 border border-red-200'
-                }`}
-              >
-                {modalFeedback.success ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                )}
-                <span>{modalFeedback.message}</span>
-              </div>
-            )}
+          <FormField label="Select Enrolled Student" name="studentSelect" required helpText="Choose the child to associate with this parent profile">
+            <SearchableSelect
+              options={studentSelectOptions}
+              value={linkStudentId}
+              onChange={setLinkStudentId}
+              placeholder="Search and choose student..."
+            />
+          </FormField>
 
-            <form onSubmit={handleLinkStudent} className="space-y-4">
-              <FormField label="Select Student" name="studentSelect" required helpText="Choose the child to associate with this parent profile">
-                <SearchableSelect
-                  options={studentSelectOptions}
-                  value={linkStudentId}
-                  onChange={setLinkStudentId}
-                  placeholder="Search and choose student..."
-                />
-              </FormField>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  id="primaryContact"
-                  type="checkbox"
-                  checked={isPrimaryContact}
-                  onChange={(e) => setIsPrimaryContact(e.target.checked)}
-                  className="rounded border-brand-border text-brand-primary focus:ring-brand-primary w-4 h-4"
-                />
-                <label htmlFor="primaryContact" className="text-caption font-medium text-brand-dark cursor-pointer">
-                  Designate as primary emergency & billing contact
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedParent(null)}
-                  className="px-4 py-2 rounded-lg border border-brand-border text-body-primary text-brand-dark font-medium hover:bg-brand-subtle transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!linkStudentId || isPending}
-                  className="px-4 py-2 rounded-lg bg-brand-primary text-white text-body-primary font-semibold hover:bg-brand-hover transition-colors flex items-center gap-2 disabled:opacity-60"
-                >
-                  {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Confirm Link
-                </button>
-              </div>
-            </form>
+          <div className="flex items-center gap-2.5 pt-2">
+            <input
+              id="primaryContact"
+              type="checkbox"
+              checked={isPrimaryContact}
+              onChange={(e) => setIsPrimaryContact(e.target.checked)}
+              className="rounded-md border-slate-300 text-[#0B72E7] focus:ring-[#0B72E7] w-4 h-4"
+            />
+            <label htmlFor="primaryContact" className="text-xs font-semibold text-slate-700 cursor-pointer">
+              Designate as primary emergency & billing contact
+            </label>
           </div>
         </div>
-      )}
+      </AdminModal>
     </div>
   );
 }

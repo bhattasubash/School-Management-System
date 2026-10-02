@@ -40,7 +40,7 @@ export default async function AdminLayout({
       : null,
   ]);
 
-  const schoolName = tenant?.name || 'Delhi Public School';
+  const schoolName = tenant?.name || 'Sunrise Public School';
   const board = tenant?.board || 'CBSE';
   const academicYearName = academicYear?.name || '2026-27';
   const adminName = user ? `${user.firstName} ${user.lastName}` : 'Administrator';

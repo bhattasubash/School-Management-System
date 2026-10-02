@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
@@ -16,34 +18,56 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-export default function PageHeader({ title, subtitle, breadcrumbs, actions, className }: PageHeaderProps) {
+export default function PageHeader({
+  title,
+  subtitle,
+  breadcrumbs,
+  actions,
+  className,
+}: PageHeaderProps) {
   return (
-    <div className={clsx('mb-6', className)}>
-      {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="flex items-center gap-1 text-caption text-brand-muted mb-2">
-          {breadcrumbs.map((crumb, index) => (
-            <React.Fragment key={index}>
-              {index > 0 && <ChevronRight className="w-3.5 h-3.5 text-brand-muted/60" />}
-              {crumb.href && index < breadcrumbs.length - 1 ? (
-                <Link href={crumb.href} className="hover:text-brand-primary transition-colors">
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className={index === breadcrumbs.length - 1 ? 'text-brand-dark font-medium' : ''}>
-                  {crumb.label}
-                </span>
-              )}
-            </React.Fragment>
-          ))}
-        </nav>
+    <div
+      className={clsx(
+        'pb-4 mb-5 border-b border-[#E2EEF8]/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4',
+        className
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-display text-brand-dark">{title}</h1>
-          {subtitle && <p className="text-body-primary text-brand-muted mt-1">{subtitle}</p>}
-        </div>
-        {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+    >
+      <div>
+        {breadcrumbs && breadcrumbs.length > 0 && (
+          <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5 font-medium">
+            <Link href="/admin" className="hover:text-[#0B72E7] transition-colors">
+              Dashboard
+            </Link>
+            {breadcrumbs.map((crumb, index) => (
+              <React.Fragment key={index}>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                {crumb.href && index < breadcrumbs.length - 1 ? (
+                  <Link href={crumb.href} className="hover:text-[#0B72E7] transition-colors">
+                    {crumb.label}
+                  </Link>
+                ) : (
+                  <span className="text-slate-600 font-semibold">{crumb.label}</span>
+                )}
+              </React.Fragment>
+            ))}
+          </nav>
+        )}
+
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight leading-tight">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="text-xs md:text-sm text-slate-500 font-normal mt-0.5 leading-normal">
+            {subtitle}
+          </p>
+        )}
       </div>
+
+      {actions && (
+        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

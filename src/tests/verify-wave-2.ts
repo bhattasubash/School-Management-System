@@ -3,10 +3,14 @@ import { AuthService } from '../services/auth.service';
 import {
   generateStudentTemplateAction,
   generateTeacherTemplateAction,
+} from '../actions/admin/import';
+import {
   archiveStudentsAction,
   reactivateStudentsAction,
+} from '../actions/admin/archive';
+import {
   createStudentAction,
-} from '../actions/admin';
+} from '../actions/admin/students';
 
 async function runWave2Tests() {
   console.log('Testing Wave 2 Features: Auth Recovery, Templates, Direct Creation, Sibling Linking, and Archiving...');

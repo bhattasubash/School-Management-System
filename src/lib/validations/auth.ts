@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const LoginSchema = z
   .object({
-    email: z.string().email('Please enter a valid email address'),
+    email: z.string().min(1, 'Please enter your Roll Number, Admission ID, or Email'),
     password: z.string().min(1, 'Password is required'),
     tenantId: z.string().uuid().optional(),
   })

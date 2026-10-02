@@ -64,6 +64,18 @@ export class AttendanceService {
       throw new Error('Section not found or unauthorized tenant access.');
     }
 
+    // Holiday Check (Soft Block with override option)
+    const holiday = await prisma.holiday.findFirst({
+      where: {
+        tenantId,
+        date: targetDate,
+      },
+    });
+
+    if (holiday && !input.overrideHoliday) {
+      throw new Error(`Today is a scheduled holiday (${holiday.name}). Attendance marking is restricted unless holiday override is enabled.`);
+    }
+
     // ACID Transaction: Atomic replace of daily attendance records for this section & date
     await prisma.$transaction(async (tx) => {
       // 1. Clear existing attendance for this specific section, date, and daily period (period = null)

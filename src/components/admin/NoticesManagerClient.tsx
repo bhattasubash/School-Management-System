@@ -16,7 +16,7 @@ import {
   Eye,
   Send,
 } from 'lucide-react';
-import { publishNoticeAction, deleteNoticeAction, type PublishNoticeInput } from '@/actions/admin';
+import { publishNoticeAction, deleteNoticeAction, type PublishNoticeInput } from '@/actions/admin/notices';
 import { NoticePriority, NoticeAudience } from '@prisma/client';
 
 export interface NoticeItem {
@@ -152,7 +152,7 @@ export default function NoticesManagerClient({ notices: initialNotices }: Notice
             setPublishError(null);
             setIsPublishOpen(true);
           }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#FF7555] hover:bg-[#ff623d] text-white font-medium text-sm rounded-xl shadow-sm transition-all transform active:scale-95 shrink-0"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0B72E7] hover:bg-[#0960C4] text-white font-medium text-sm rounded-xl shadow-sm transition-all transform active:scale-95 shrink-0"
         >
           <Plus className="w-4 h-4" />
           Publish New Circular
@@ -231,7 +231,7 @@ export default function NoticesManagerClient({ notices: initialNotices }: Notice
             placeholder="Search circulars by keyword..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
           />
         </div>
       </div>
@@ -336,7 +336,7 @@ export default function NoticesManagerClient({ notices: initialNotices }: Notice
                   placeholder="e.g. Winter Break Schedule and Examination Guidelines"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                   required
                 />
               </div>
@@ -347,7 +347,7 @@ export default function NoticesManagerClient({ notices: initialNotices }: Notice
                   <select
                     value={targetAudience}
                     onChange={(e) => setTargetAudience(e.target.value as NoticeAudience)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                   >
                     <option value="ALL">All (Entire School)</option>
                     <option value="PARENTS">Parents Only</option>
@@ -361,7 +361,7 @@ export default function NoticesManagerClient({ notices: initialNotices }: Notice
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as NoticePriority)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555]"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7]"
                   >
                     <option value="NORMAL">Normal</option>
                     <option value="IMPORTANT">Important</option>
@@ -377,7 +377,7 @@ export default function NoticesManagerClient({ notices: initialNotices }: Notice
                   placeholder="Type the full notice announcement text here..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7555]/30 focus:border-[#FF7555] resize-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0B72E7]/30 focus:border-[#0B72E7] resize-none"
                   required
                 />
               </div>
@@ -385,7 +385,7 @@ export default function NoticesManagerClient({ notices: initialNotices }: Notice
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3 bg-[#FF7555] hover:bg-[#ff623d] text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 bg-[#0B72E7] hover:bg-[#0960C4] text-white font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>

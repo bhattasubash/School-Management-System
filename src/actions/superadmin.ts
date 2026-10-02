@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { safeRevalidatePath as revalidatePath } from '@/lib/revalidate';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { getSessionFromCookies } from '@/lib/session';
+import { requireAuthGuard } from '@/lib/auth-guard';
+import { Role } from '@/types';
 import { AuthService } from '@/services/auth.service';
 import { SubscriptionStatus } from '@prisma/client';
 
@@ -78,10 +79,12 @@ const SubscriptionPlanSchema = z.object({
  * - Audit Trail Record
  */
 export async function provisionSchoolTenantAction(rawInput: ProvisionSchoolInput) {
-  const session = await getSessionFromCookies();
-  if (!session || session.role !== 'SUPER_ADMIN') {
-    return { success: false, error: 'Unauthorized: Super Admin credentials required.' };
+  const guard = await requireAuthGuard([Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { userId } = guard.context;
 
   const validation = ProvisionSchoolSchema.safeParse(rawInput);
   if (!validation.success) {
@@ -229,7 +232,7 @@ export async function provisionSchoolTenantAction(rawInput: ProvisionSchoolInput
       await tx.auditLog.create({
         data: {
           tenantId: newTenant.id,
-          userId: session.sub,
+          userId,
           action: 'TENANT_PROVISIONED',
           entityType: 'Tenant',
           entityId: newTenant.id,
@@ -273,10 +276,12 @@ export async function provisionSchoolTenantAction(rawInput: ProvisionSchoolInput
  * Toggle School Tenant Status (ACTIVE, INACTIVE, SUSPENDED)
  */
 export async function toggleTenantStatusAction(rawInput: z.infer<typeof ToggleTenantStatusSchema>) {
-  const session = await getSessionFromCookies();
-  if (!session || session.role !== 'SUPER_ADMIN') {
-    return { success: false, error: 'Unauthorized: Super Admin credentials required.' };
+  const guard = await requireAuthGuard([Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { userId } = guard.context;
 
   const validation = ToggleTenantStatusSchema.safeParse(rawInput);
   if (!validation.success) {
@@ -298,7 +303,7 @@ export async function toggleTenantStatusAction(rawInput: z.infer<typeof ToggleTe
     await prisma.auditLog.create({
       data: {
         tenantId: updatedTenant.id,
-        userId: session.sub,
+        userId,
         action: 'TENANT_STATUS_UPDATED',
         entityType: 'Tenant',
         entityId: updatedTenant.id,
@@ -322,10 +327,12 @@ export async function toggleTenantStatusAction(rawInput: z.infer<typeof ToggleTe
  * Verify DNS / CNAME for a custom tenant domain
  */
 export async function verifyDomainAction(domainId: string) {
-  const session = await getSessionFromCookies();
-  if (!session || session.role !== 'SUPER_ADMIN') {
-    return { success: false, error: 'Unauthorized: Super Admin credentials required.' };
+  const guard = await requireAuthGuard([Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { userId } = guard.context;
 
   try {
     const domainRecord = await prisma.tenantDomain.findUnique({
@@ -348,7 +355,7 @@ export async function verifyDomainAction(domainId: string) {
     await prisma.auditLog.create({
       data: {
         tenantId: domainRecord.tenantId,
-        userId: session.sub,
+        userId,
         action: 'DOMAIN_VERIFIED',
         entityType: 'TenantDomain',
         entityId: domainRecord.id,
@@ -373,10 +380,12 @@ export async function verifyDomainAction(domainId: string) {
  * Add a custom domain mapping to a tenant
  */
 export async function addTenantDomainAction(rawInput: z.infer<typeof DomainActionSchema>) {
-  const session = await getSessionFromCookies();
-  if (!session || session.role !== 'SUPER_ADMIN') {
-    return { success: false, error: 'Unauthorized: Super Admin credentials required.' };
+  const guard = await requireAuthGuard([Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { userId } = guard.context;
 
   const validation = DomainActionSchema.safeParse(rawInput);
   if (!validation.success) {
@@ -408,7 +417,7 @@ export async function addTenantDomainAction(rawInput: z.infer<typeof DomainActio
     await prisma.auditLog.create({
       data: {
         tenantId,
-        userId: session.sub,
+        userId,
         action: 'DOMAIN_ADDED',
         entityType: 'TenantDomain',
         entityId: newDomain.id,
@@ -432,10 +441,12 @@ export async function addTenantDomainAction(rawInput: z.infer<typeof DomainActio
  * Delete a custom domain mapping
  */
 export async function deleteTenantDomainAction(domainId: string) {
-  const session = await getSessionFromCookies();
-  if (!session || session.role !== 'SUPER_ADMIN') {
-    return { success: false, error: 'Unauthorized: Super Admin credentials required.' };
+  const guard = await requireAuthGuard([Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { userId } = guard.context;
 
   try {
     const domainRecord = await prisma.tenantDomain.findUnique({
@@ -453,7 +464,7 @@ export async function deleteTenantDomainAction(domainId: string) {
     await prisma.auditLog.create({
       data: {
         tenantId: domainRecord.tenantId,
-        userId: session.sub,
+        userId,
         action: 'DOMAIN_DELETED',
         entityType: 'TenantDomain',
         entityId: domainId,
@@ -477,10 +488,12 @@ export async function deleteTenantDomainAction(domainId: string) {
  * Create a new SaaS Subscription Plan
  */
 export async function createSubscriptionPlanAction(rawInput: z.infer<typeof SubscriptionPlanSchema>) {
-  const session = await getSessionFromCookies();
-  if (!session || session.role !== 'SUPER_ADMIN') {
-    return { success: false, error: 'Unauthorized: Super Admin credentials required.' };
+  const guard = await requireAuthGuard([Role.SUPER_ADMIN]);
+  if (!guard.success) {
+    return { success: false, error: guard.error };
   }
+
+  const { userId } = guard.context;
 
   const validation = SubscriptionPlanSchema.safeParse(rawInput);
   if (!validation.success) {
@@ -507,7 +520,7 @@ export async function createSubscriptionPlanAction(rawInput: z.infer<typeof Subs
 
     await prisma.auditLog.create({
       data: {
-        userId: session.sub,
+        userId,
         action: 'SUBSCRIPTION_PLAN_CREATED',
         entityType: 'SubscriptionPlan',
         entityId: plan.id,

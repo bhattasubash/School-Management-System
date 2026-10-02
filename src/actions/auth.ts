@@ -72,10 +72,16 @@ export async function loginAction(input: LoginInput): Promise<AuthResult> {
   };
 }
 
+import { revokeAllUserSessions } from '@/lib/session-revocation';
+
 /**
- * Server Action to sign out current user by purging the session cookie and redirecting to /login.
+ * Server Action to sign out current user by revoking all sessions, purging the session cookie and redirecting to /login.
  */
 export async function logoutAction(): Promise<void> {
+  const session = await getSessionFromCookies();
+  if (session?.sub) {
+    await revokeAllUserSessions(session.sub);
+  }
   await clearSessionCookie();
   redirect('/login');
 }

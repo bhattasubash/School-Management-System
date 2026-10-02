@@ -2,9 +2,11 @@ import { prisma } from '@/lib/db';
 import {
   publishNoticeAction,
   deleteNoticeAction,
+} from '@/actions/admin/notices';
+import {
   assignTeacherSubstitutionAction,
   cancelTeacherSubstitutionAction,
-} from '@/actions/admin';
+} from '@/actions/admin/substitutions';
 import { AuthService } from '@/services/auth.service';
 
 async function main() {

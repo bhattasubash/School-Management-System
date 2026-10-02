@@ -13,6 +13,7 @@ export const MarkDailyAttendanceSchema = z
     sectionId: z.string().uuid(),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format must be YYYY-MM-DD'),
     records: z.array(DailyAttendanceRecordSchema).min(1, 'At least one student record is required'),
+    overrideHoliday: z.boolean().optional(),
   })
   .strict();
 
