@@ -130,7 +130,7 @@ export default function DomainsManagerClient({
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Manage custom branded domains, DNS CNAME propagation, Let's Encrypt SSL certificates, and multi-tenant routing.
+            Manage custom branded domains, DNS CNAME propagation, Let&apos;s Encrypt SSL certificates, and multi-tenant routing.
           </p>
         </div>
 

@@ -1,39 +1,27 @@
 import { SignJWT, jwtVerify } from 'jose';
 import type { JWTPayload, RoleType } from '@/types';
 
-const DEV_TEST_FALLBACK_SECRET = 'dev-only-secret-do-not-use-in-production-min-32-chars!!';
-let hasWarnedDevSecret = false;
-
 /**
  * Authoritative JWT Secret Retrieval.
- * In production (NODE_ENV === 'production'), strictly requires JWT_SECRET >= 32 characters.
- * Fails closed with a fatal error if missing or too short in production.
+ * Strictly requires JWT_SECRET >= 32 characters in all environments outside of unit test execution.
+ * Fails closed with a fatal error if missing or too short.
  */
 export function getJwtSecretKey(): Uint8Array {
   const secret = process.env.JWT_SECRET;
 
-  if (process.env.NODE_ENV === 'production') {
-    if (!secret || secret.trim().length < 32) {
-      throw new Error(
-        'FATAL SECURITY MISCONFIGURATION: JWT_SECRET environment variable must be set with at least 32 characters in production.'
-      );
-    }
-    return new TextEncoder().encode(secret.trim());
-  }
-
-  // Non-production (development / test)
   if (secret && secret.trim().length >= 32) {
     return new TextEncoder().encode(secret.trim());
   }
 
-  if (!hasWarnedDevSecret && process.env.NODE_ENV !== 'test') {
-    console.warn(
-      '[SECURITY WARNING] JWT_SECRET is not configured or shorter than 32 chars. Using local ephemeral development secret. Set JWT_SECRET in your .env file.'
+  // Outside test environment, fail closed with fatal configuration error
+  if (process.env.NODE_ENV !== 'test') {
+    throw new Error(
+      'FATAL SECURITY MISCONFIGURATION: JWT_SECRET environment variable must be set with at least 32 characters.'
     );
-    hasWarnedDevSecret = true;
   }
 
-  return new TextEncoder().encode(DEV_TEST_FALLBACK_SECRET);
+  // Dedicated test-only ephemeral key (for CI test execution where env may not be loaded)
+  return new TextEncoder().encode('test-environment-ephemeral-secret-min-32-chars!!');
 }
 
 /**

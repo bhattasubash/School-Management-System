@@ -994,7 +994,7 @@ export default function StudentDirectoryClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Father's Name <span className="text-red-500">*</span>
+                  Father&apos;s Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1008,7 +1008,7 @@ export default function StudentDirectoryClient({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Father's Mobile <span className="text-red-500">*</span>
+                  Father&apos;s Mobile <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"

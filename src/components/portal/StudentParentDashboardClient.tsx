@@ -165,7 +165,7 @@ export default function StudentParentDashboardClient({
     if (qView && qView !== activeNav) {
       setActiveNav(qView);
     }
-  }, [searchParams]);
+  }, [searchParams, activeNav]);
 
   const handleSelectNav = (navId: string) => {
     setActiveNav(navId);

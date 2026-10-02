@@ -97,11 +97,6 @@ export async function middleware(request: NextRequest) {
   const isProtectedRoute = requiresAdmin || requiresTeacher || requiresSuperAdmin || requiresPortal;
 
   if (isProtectedRoute && !session) {
-    if (requiresTeacher && process.env.NODE_ENV === 'development') {
-      requestHeaders.set('x-user-role', 'TEACHER');
-      requestHeaders.set('x-user-id', 'mock-teacher-id');
-      return NextResponse.next({ request: { headers: requestHeaders } });
-    }
     if (isApiRoute) {
       return NextResponse.json({ success: false, error: 'Unauthorized: Authentication session required.' }, { status: 401 });
     }
@@ -111,16 +106,23 @@ export async function middleware(request: NextRequest) {
   }
 
   if (session) {
-
     // Check specific role requirements
     if (requiresSuperAdmin && session.role !== 'SUPER_ADMIN') {
       if (isApiRoute) return NextResponse.json({ success: false, error: 'Forbidden: Super Admin privileges required.' }, { status: 403 });
       return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
 
-    if (requiresAdmin && session.role !== 'ADMIN' && session.role !== 'SUPER_ADMIN' && session.role !== 'ACCOUNTANT') {
-      if (isApiRoute) return NextResponse.json({ success: false, error: 'Forbidden: Admin or Accountant privileges required.' }, { status: 403 });
-      return NextResponse.redirect(new URL('/unauthorized', request.url));
+    if (requiresAdmin) {
+      const isFeeRoute = pathname.startsWith('/admin/fees') || pathname.startsWith('/api/admin/fees');
+      const isAllowedAdmin = session.role === 'ADMIN' || session.role === 'SUPER_ADMIN';
+      const isAllowedAccountant = session.role === 'ACCOUNTANT' && isFeeRoute;
+
+      if (!isAllowedAdmin && !isAllowedAccountant) {
+        if (isApiRoute) {
+          return NextResponse.json({ success: false, error: 'Forbidden: Insufficient privileges for this section.' }, { status: 403 });
+        }
+        return NextResponse.redirect(new URL('/unauthorized', request.url));
+      }
     }
 
     if (requiresTeacher && session.role !== 'TEACHER' && session.role !== 'SUPER_ADMIN' && session.role !== 'ADMIN') {
