@@ -228,12 +228,9 @@ export default function StudentParentDashboardClient({
   };
 
   return (
-    <div className="min-h-screen bg-[#EBF6FD] text-slate-900 font-sans antialiased relative">
-      {/* Top Cyan Accent Band matching the reference screenshot */}
-      <div className="h-1.5 w-full bg-[#20C5FE] sticky top-0 z-50" />
-
+    <div className="min-h-screen bg-gradient-to-b from-[#22B8FD] via-[#D3EEFD]/60 to-[#EBF6FD] text-slate-900 font-sans antialiased relative">
       {/* Global Shell Wrapper */}
-      <div className="flex min-h-[calc(100vh-6px)] p-3 sm:p-4 gap-4 sm:gap-5">
+      <div className="flex min-h-screen p-3 sm:p-4 gap-4 sm:gap-5">
         {/* Left Sidebar */}
         <PortalSidebar
           activeNav={activeNav}

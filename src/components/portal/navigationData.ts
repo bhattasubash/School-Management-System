@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard,
+  Home,
   Contact,
   UserCog,
   CalendarClock,
@@ -42,7 +42,7 @@ export const PORTAL_NAV_SECTIONS: PortalNavSection[] = [
   {
     title: 'MAIN',
     items: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'dashboard', label: 'Dashboard', icon: Home },
       { id: 'student-id-card', label: 'Student ID Card', icon: Contact },
       { id: 'profile-settings', label: 'Profile & Settings', icon: UserCog },
     ],

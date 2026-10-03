@@ -88,160 +88,236 @@ function LoginForm() {
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center bg-[#D6EEFE] bg-cover bg-center bg-no-repeat p-4 sm:p-6 lg:p-0 select-none"
+      className="relative min-h-screen w-full flex items-center justify-center bg-[#D6EEFE] select-none"
       style={{
         backgroundImage: "url('/login-reference-1536.png')",
+        backgroundSize: '1536px 1024px',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         backgroundColor: '#D6EEFE',
       }}
     >
-      {/* Centered Main Login Container */}
-      <main
-        className="w-full max-w-[1405px] h-auto lg:h-[841px] bg-white rounded-[28px] lg:rounded-[36px] overflow-hidden flex flex-col lg:flex-row border border-white/60 shadow-[0_20px_60px_-15px_rgba(15,45,95,0.14)]"
+      {/* 1536x1024 Canvas Wrapper for Desktop Pixel Accuracy */}
+      <div
+        className="relative w-full max-w-[1536px] h-full min-h-screen lg:h-[1024px] flex items-center justify-center lg:block"
       >
-        {/* ==================================================================== */}
-        {/* LEFT COLUMN: BRANDING & SCHOOL ILLUSTRATION (780px / ~55.5%)         */}
-        {/* ==================================================================== */}
-        <section
-          className="relative w-full lg:w-[780px] h-[360px] sm:h-[480px] lg:h-[841px] shrink-0 bg-cover bg-center overflow-hidden"
+        {/* Main Login Container - Fixed to 1406x842 at (68, 94) on Desktop */}
+        <main
+          className="relative lg:absolute w-full max-w-[1406px] h-auto lg:h-[842px] bg-white rounded-[28px] lg:rounded-[36px] overflow-hidden flex flex-col lg:flex-row border border-white/60 shadow-[0_20px_60px_-15px_rgba(15,45,95,0.14)]"
           style={{
-            backgroundImage: "url('/left-panel-raw.png')",
+            left: '68px',
+            top: '94px',
+            width: '1406px',
+            height: '842px',
           }}
-          aria-label="Sunrise Public School Overview"
         >
-          {/* Accessible Semantic Content (hidden visually to preserve pixel-exact artwork) */}
-          <div className="sr-only">
-            <h1>Sunrise Public School</h1>
-            <p>Learn · Grow · Excel</p>
-            <h2>Empowering Brighter Tomorrows</h2>
-            <p>A simple, unified platform to manage students, classes, teachers and school operations.</p>
-          </div>
-        </section>
+          {/* ==================================================================== */}
+          {/* LEFT COLUMN: BRANDING & SCHOOL ILLUSTRATION (780px / ~55.5%)         */}
+          {/* ==================================================================== */}
+          <section
+            className="relative shrink-0 overflow-hidden"
+            style={{
+              width: '780px',
+              height: '842px',
+              backgroundImage: "url('/left-panel-raw.png')",
+              backgroundSize: '780px 842px',
+              backgroundPosition: '0 0',
+              backgroundRepeat: 'no-repeat',
+            }}
+            aria-label="Sunrise Public School Overview"
+          >
+            {/* Accessible Semantic Content */}
+            <div className="sr-only">
+              <h1>Sunrise Public School</h1>
+              <p>Learn · Grow · Excel</p>
+              <h2>Empowering Brighter Tomorrows</h2>
+              <p>A simple, unified platform to manage students, classes, teachers and school operations.</p>
+            </div>
+          </section>
 
-        {/* ==================================================================== */}
-        {/* RIGHT COLUMN: LOGIN FORM PANEL (625px / ~44.5%)                      */}
-        {/* ==================================================================== */}
-        <section
-          className="w-full lg:w-[625px] h-full shrink-0 bg-white lg:rounded-l-[36px] flex flex-col justify-center px-6 sm:px-12 lg:pl-[92px] lg:pr-[68px] py-10 lg:py-0 select-auto"
-        >
-          <div className="w-full max-w-[465px] mx-auto lg:mx-0">
-            {/* Header Titles */}
-            <h1 className="text-[28px] sm:text-[32px] font-bold text-[#0F172A] tracking-[-0.02em] leading-tight">
-              Welcome Back
-            </h1>
-            <p className="text-[14px] sm:text-[15px] font-normal text-[#717694] mt-[8px] sm:mt-[10px]">
-              Sign in to your Sunrise Public School account
-            </p>
-
-            {/* Error Message Display */}
-            {errorMessage && (
-              <div
-                role="alert"
-                className="mt-4 p-3 bg-red-50/90 border border-red-200 rounded-[12px] flex items-start gap-2.5 text-red-700 text-xs sm:text-sm animate-in fade-in"
+          {/* ==================================================================== */}
+          {/* RIGHT COLUMN: LOGIN FORM PANEL (626px / ~44.5%)                      */}
+          {/* ==================================================================== */}
+          <section
+            className="shrink-0 bg-white rounded-l-[36px] flex flex-col select-auto"
+            style={{
+              width: '626px',
+              height: '842px',
+              paddingTop: '166px',
+              paddingLeft: '91px',
+              paddingRight: '69px',
+            }}
+          >
+            <div style={{ width: '466px' }}>
+              {/* Header Titles */}
+              <h1
+                className="font-bold leading-none"
+                style={{
+                  fontSize: '40px',
+                  color: '#000127',
+                  letterSpacing: '-0.025em',
+                }}
               >
-                <AlertCircleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
+                Welcome Back
+              </h1>
+              <p
+                className="font-normal leading-tight"
+                style={{
+                  fontSize: '16px',
+                  color: '#7F81A6',
+                  marginTop: '11px',
+                }}
+              >
+                Sign in to your Sunrise Public School account
+              </p>
 
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} className="mt-[32px] sm:mt-[44px]">
-              {/* Field 1: Roll Number / Admission ID */}
-              <div>
-                <label
-                  htmlFor="roll-number-input"
-                  className="block text-[13.5px] font-semibold text-[#0F172A] mb-[10px]"
+              {/* Error Message Display */}
+              {errorMessage && (
+                <div
+                  role="alert"
+                  className="mt-4 p-3 bg-red-50/90 border border-red-200 rounded-[12px] flex items-start gap-2.5 text-red-700 text-xs sm:text-sm animate-in fade-in"
                 >
-                  Roll Number / Admission ID
-                </label>
-                <input
-                  id="roll-number-input"
-                  type="text"
-                  required
-                  autoComplete="username"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  placeholder="Enter your roll number"
-                  className="w-full h-[54px] sm:h-[58px] px-[24px] sm:px-[28px] rounded-[14px] border border-[#E2E8F0] bg-white text-[15px] font-normal text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0C8CFE] focus:outline-none focus:ring-2 focus:ring-[#0C8CFE]/20 transition-all"
-                />
-              </div>
-
-              {/* Field 2: Password */}
-              <div className="mt-[24px] sm:mt-[26px]">
-                <label
-                  htmlFor="password-input"
-                  className="block text-[13.5px] font-semibold text-[#0F172A] mb-[10px]"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password-input"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full h-[54px] sm:h-[58px] pl-[24px] sm:pl-[28px] pr-[54px] sm:pr-[58px] rounded-[14px] border border-[#E2E8F0] bg-white text-[15px] font-normal text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#0C8CFE] focus:outline-none focus:ring-2 focus:ring-[#0C8CFE]/20 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-[20px] sm:right-[24px] top-1/2 -translate-y-1/2 text-[#8C96A8] hover:text-[#475569] p-1 transition-colors"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <EyeIcon className="w-5 h-5" />
-                    ) : (
-                      <EyeOffIcon className="w-5 h-5" />
-                    )}
-                  </button>
+                  <AlertCircleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{errorMessage}</span>
                 </div>
-              </div>
+              )}
 
-              {/* Forgot Password Link */}
-              <div className="text-right mt-[14px]">
-                <Link
-                  href="/login/forgot-password"
-                  className="text-[14px] font-medium text-[#0C8CFE] hover:underline transition-colors"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
+              {/* Login Form */}
+              <form onSubmit={handleSubmit} style={{ marginTop: '54px' }}>
+                {/* Field 1: Roll Number / Admission ID */}
+                <div>
+                  <label
+                    htmlFor="roll-number-input"
+                    className="block font-semibold leading-none"
+                    style={{
+                      fontSize: '14px',
+                      color: '#0A1344',
+                      marginBottom: '11px',
+                    }}
+                  >
+                    Roll Number / Admission ID
+                  </label>
+                  <input
+                    id="roll-number-input"
+                    type="text"
+                    required
+                    autoComplete="username"
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    placeholder="Enter your roll number"
+                    className="w-full rounded-[14px] border border-[#E2E8F0] bg-white transition-all font-normal focus:border-[#008CFF] focus:outline-none focus:ring-2 focus:ring-[#008CFF]/20"
+                    style={{
+                      height: '60px',
+                      paddingLeft: '28px',
+                      paddingRight: '28px',
+                      fontSize: '15px',
+                      color: '#0A1344',
+                    }}
+                  />
+                </div>
 
-              {/* Sign In Button */}
-              <button
-                type="submit"
-                disabled={isPending}
-                className="w-full h-[58px] sm:h-[62px] mt-[32px] sm:mt-[34px] rounded-[14px] bg-[#0C8CFE] hover:bg-[#007AE6] active:bg-[#006ED0] text-white font-semibold text-[16px] sm:text-[17px] flex items-center justify-center gap-2.5 shadow-[0_4px_14px_0_rgba(12,140,254,0.35)] hover:shadow-[0_6px_20px_0_rgba(12,140,254,0.45)] transition-all cursor-pointer disabled:opacity-60"
-              >
-                {isPending ? (
-                  <>
-                    <LoaderIcon className="w-5 h-5 animate-spin" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <svg
-                      className="w-[18px] h-[18px]"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+                {/* Field 2: Password */}
+                <div style={{ marginTop: '34px' }}>
+                  <label
+                    htmlFor="password-input"
+                    className="block font-semibold leading-none"
+                    style={{
+                      fontSize: '14px',
+                      color: '#0A1344',
+                      marginBottom: '11px',
+                    }}
+                  >
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password-input"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full rounded-[14px] border border-[#E2E8F0] bg-white transition-all font-normal focus:border-[#008CFF] focus:outline-none focus:ring-2 focus:ring-[#008CFF]/20"
+                      style={{
+                        height: '60px',
+                        paddingLeft: '28px',
+                        paddingRight: '56px',
+                        fontSize: '15px',
+                        color: '#0A1344',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute top-1/2 -translate-y-1/2 p-1 transition-colors hover:opacity-80"
+                      style={{ right: '22px', color: '#8789AD' }}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      <line x1="4" y1="12" x2="20" y2="12"></line>
-                      <polyline points="13 5 20 12 13 19"></polyline>
-                    </svg>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        </section>
-      </main>
+                      {showPassword ? (
+                        <EyeIcon className="w-5 h-5" />
+                      ) : (
+                        <EyeOffIcon className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Forgot Password Link */}
+                <div className="text-right" style={{ marginTop: '18px' }}>
+                  <Link
+                    href="/login/forgot-password"
+                    className="font-medium hover:underline transition-colors"
+                    style={{
+                      fontSize: '14.5px',
+                      color: '#0080FE',
+                    }}
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
+
+                {/* Sign In Button */}
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full rounded-[14px] text-white font-semibold flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-60 hover:brightness-105 active:brightness-95"
+                  style={{
+                    height: '62px',
+                    marginTop: '38px',
+                    fontSize: '17px',
+                    backgroundColor: '#0C8CFE',
+                    boxShadow: '0 8px 22px rgba(12, 140, 254, 0.35)',
+                  }}
+                >
+                  {isPending ? (
+                    <>
+                      <LoaderIcon className="w-5 h-5 animate-spin" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In</span>
+                      <svg
+                        className="w-[18px] h-[18px]"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="4" y1="12" x2="20" y2="12"></line>
+                        <polyline points="13 5 20 12 13 19"></polyline>
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }

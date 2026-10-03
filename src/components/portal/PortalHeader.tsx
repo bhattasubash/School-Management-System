@@ -46,20 +46,20 @@ export default function PortalHeader({
   const [childDropdownOpen, setChildDropdownOpen] = useState(false);
 
   return (
-    <header className="bg-white rounded-[20px] shadow-[0_4px_20px_rgba(0,100,200,0.06)] border border-blue-50/80 px-4 sm:px-6 h-16 flex items-center justify-between gap-3 relative z-30">
+    <header className="bg-transparent flex items-center justify-between gap-3 relative z-30">
       {/* Left: Mobile Menu + Search Bar */}
       <div className="flex items-center gap-3 flex-1 max-w-lg">
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+          className="lg:hidden p-2 rounded-xl bg-white shadow-xs border border-slate-100 text-slate-600 hover:bg-slate-50 transition-colors"
           title="Open Navigation"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Search Bar Input */}
-        <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200/80 hover:border-slate-300 focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-blue-100 w-full transition-all">
+        {/* Search Bar Input (Floating White Card) */}
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:border-slate-200 focus-within:border-[#2563EB] focus-within:ring-2 focus-within:ring-blue-100 w-full transition-all">
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             type="text"
@@ -143,7 +143,7 @@ export default function PortalHeader({
         <button
           type="button"
           onClick={() => onSelectNav('notifications')}
-          className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors"
+          className="relative p-2.5 rounded-xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-slate-100/80 text-slate-600 hover:text-slate-900 hover:shadow-md transition-all"
           title="Notifications"
         >
           <Bell className="w-5 h-5 text-slate-500" />
@@ -157,7 +157,7 @@ export default function PortalHeader({
           <button
             type="button"
             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-            className="flex items-center gap-2.5 pl-2 sm:pl-3 py-1 rounded-xl hover:bg-slate-50 transition-colors text-left"
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-slate-100/80 hover:shadow-md transition-all text-left"
           >
             {/* Circular Avatar */}
             <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200/90 bg-sky-50 shrink-0">

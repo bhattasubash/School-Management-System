@@ -78,7 +78,7 @@ export default function DashboardScreen({
         {/* Right: School Campus Illustration */}
         <div className="relative w-full md:w-auto h-28 sm:h-32 flex items-center justify-end z-0">
           <img
-            src="/images/dashboard/ref_school_hero.png"
+            src="/images/dashboard/ref_school_hero_clean.png"
             alt="Sunrise Public School Campus"
             className="h-full object-contain rounded-r-2xl select-none pointer-events-none"
           />
@@ -284,9 +284,9 @@ export default function DashboardScreen({
                 {/* Lighter backdrop circle */}
                 <div className="absolute top-0 right-2 w-24 h-24 rounded-full bg-white/20 -z-10" />
                 <img
-                  src="/images/dashboard/card_study_materials.jpg"
+                  src="/images/dashboard/illust_study_materials_clean.png"
                   alt="Study Materials"
-                  className="h-full object-contain select-none pointer-events-none mix-blend-multiply drop-shadow-xs"
+                  className="h-full object-contain select-none pointer-events-none drop-shadow-md"
                 />
               </div>
 
@@ -318,9 +318,9 @@ export default function DashboardScreen({
                 {/* Lighter backdrop circle */}
                 <div className="absolute top-0 right-2 w-24 h-24 rounded-full bg-white/20 -z-10" />
                 <img
-                  src="/images/dashboard/card_results.jpg"
+                  src="/images/dashboard/illust_results.png"
                   alt="My Results"
-                  className="h-full object-contain select-none pointer-events-none mix-blend-multiply drop-shadow-xs"
+                  className="h-full object-contain select-none pointer-events-none drop-shadow-md"
                 />
               </div>
 
