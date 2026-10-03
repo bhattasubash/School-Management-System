@@ -13,13 +13,14 @@ async function testStudentPortal() {
   console.log('Login successful! Token:', loginRes.token.slice(0, 20) + '...');
   console.log('User:', loginRes.user?.email, 'Role:', loginRes.user?.role, 'Tenant:', loginRes.user?.tenantId);
 
-  console.log('Testing GET http://localhost:3001/portal (manual redirect)...');
+  const port = process.env.PORT || '3000';
+  console.log(`Testing GET http://localhost:${port}/portal (manual redirect)...`);
 
-  const res = await fetch('http://localhost:3001/portal', {
+  const res = await fetch(`http://localhost:${port}/portal`, {
     method: 'GET',
     headers: {
       Cookie: `session_token=${loginRes.token}`,
-      Host: 'localhost:3001',
+      Host: `localhost:${port}`,
     },
     redirect: 'manual',
   });
