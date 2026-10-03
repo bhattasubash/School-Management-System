@@ -95,8 +95,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If already logged in and visiting /login, redirect to their home portal
-  if (isLoginPage && session) {
+  // If already logged in and visiting /login (GET only), redirect to their home portal
+  const isServerAction = request.method !== 'GET' || request.headers.has('next-action');
+  if (isLoginPage && session && !isServerAction) {
     if (session.mustChangePassword) {
       return NextResponse.redirect(new URL('/change-password', request.url));
     }

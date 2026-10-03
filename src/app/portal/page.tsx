@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import { getSessionFromCookies } from '@/lib/session';
+import { getSessionFromCookies, clearSessionCookie } from '@/lib/session';
 import { DayOfWeek } from '@prisma/client';
 import StudentParentDashboardClient, {
   type StudentDashboardProps,
@@ -65,6 +65,7 @@ export default async function PortalPage({ searchParams }: PageProps) {
   });
 
   if (!currentUser) {
+    await clearSessionCookie();
     redirect('/login');
   }
 

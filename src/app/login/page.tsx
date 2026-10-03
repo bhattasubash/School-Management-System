@@ -80,8 +80,13 @@ function LoginForm() {
         } else {
           setErrorMessage(result.error || 'Authentication failed. Please verify credentials.');
         }
-      } catch {
-        setErrorMessage('A network error occurred. Please check your connectivity.');
+      } catch (err: any) {
+        console.error('Login submission error:', err);
+        setErrorMessage(
+          err?.message && !err.message.includes('fetch')
+            ? err.message
+            : 'Authentication failed. Please verify your credentials or server connection.'
+        );
       }
     });
   };
