@@ -193,3 +193,54 @@ Every module is evaluated across 6 objective dimensions (each 0.0 to 1.0, 16.67%
 - [x] `FINDINGS.md` committed and up-to-date.
 
 **GATE 0.5 IS COMPLETE.** Ready for Phase 1A.
+
+---
+
+## 6. Phase 1A Completion — Critical Holes Resolved
+
+- [x] **Next.js upgraded to 14.2.35 exactly** (patched CVE-2025-29927). Clean build with 0 CVE audit failures.
+- [x] **x-middleware-subrequest & defense-in-depth**: Middleware strips incoming internal headers (`x-user-*`, `x-tenant-*`, `x-middleware-subrequest`). Server actions and pages re-verify tenant, session, and role independently.
+- [x] **JWT Dev Fallback Removed**: Startup and secret resolution fails closed outside test environments.
+- [x] **Accountant RBAC Hardened**: Accountant role strictly restricted to `/admin/fees*` and `/api/admin/fees*`. All non-fee endpoints rejected with 403 Forbidden.
+- [x] **Replaced `xlsx` with `exceljs@4.4.0`**: Added 5MB file cap, 2,000-row limit, PK magic-byte check, and MZ executable rejection.
+- [x] **Backdoor Endpoint Removed**: Deleted `src/app/api/dev-login-student/route.ts`.
+- [x] **Verified Suite**: `src/tests/verify-phase-1a.ts` (28/28 tests passed).
+
+**GATE 1A IS COMPLETE.**
+
+---
+
+## 7. Phase 1B Completion — Multi-Tenant Isolation Proof & Host Spoofing
+
+- [x] **Prisma Tenant Extension Full Coverage**: `src/lib/db.ts` extends `getTenantDb(tenantId)` to intercept every operation: `findFirst`, `findFirstOrThrow`, `findUnique`, `findUniqueOrThrow`, `findMany`, `count`, `aggregate`, `groupBy`, `create`, `createMany`, `update`, `updateMany`, `upsert`, `delete`, `deleteMany`.
+- [x] **Defect Resolution**: `findUnique` and `aggregate` cross-tenant data leakage identified and fixed by intercepting and redirecting to tenant-scoped filters.
+- [x] **Server Actions Tenant Scoping**: All timetable entries, substitutions, emergency contacts, events, holidays, and student section transfers converted to tenant-scoped operations.
+- [x] **Host & Header Spoofing Protection**: `src/middleware.ts` enforces RFC hostname regex validation (`/^[a-z0-9.-]+$/`), strips custom ports, validates custom domains against verified `TenantDomain` records, and blocks spoofed `Host` and `X-Forwarded-Host` headers.
+- [x] **Verified Suite**: `src/tests/verify-phase-1b.ts` (44/44 cross-tenant adversarial negative tests passed).
+
+**GATE 1B IS COMPLETE.**
+
+---
+
+## 8. Phase 1C Completion — Remaining Security Hardening
+
+- [x] **Aadhaar Storage & UIDAI Compliance (`src/lib/aadhaar.ts`)**:
+  - In compliance with UIDAI regulations, default storage masks raw Aadhaar to `XXXX-XXXX-last4`.
+  - AES-256-GCM encryption with 96-bit random IV and 128-bit authentication tag implemented for scenarios where full storage is required (`AADHAAR_FULL_STORAGE_REQUIRED=true`).
+  - Tamper detection verified: altered ciphertext or authentication tags reject with cryptographic errors.
+  - Display sanitization (`sanitizeAadhaarForDisplay`): raw 12 digits are NEVER returned to UI/API; all stored forms display as `XXXX-XXXX-last4`.
+  - Automated database migration helper `migrateAadhaarRecords(prisma)` provided to backfill unmasked legacy records.
+- [x] **Redis Fail-Closed Behavior (`src/lib/rate-limit.ts`, `src/lib/session-revocation.ts`)**:
+  - `rateLimit`: During Redis outages in production (`NODE_ENV === 'production'`) or with `failClosed: true`, login rate limits deny requests immediately (`allowed: false`) rather than failing open across uncoordinated instances.
+  - `isSessionRevoked`: During Redis outages in fail-closed mode, unverifiable sessions are treated as REVOKED (`return true`), preventing compromised tokens from bypassing revocation.
+  - `revokeAllUserSessions`: Throws an explicit error during Redis outages in fail-closed mode to prevent silent revocation loss.
+- [x] **Cookie Security Flags (`src/lib/session.ts`)**:
+  - Centralized `getSessionCookieOptions()` enforces: `httpOnly: true`, `secure: true` (in production or with `COOKIE_SECURE=true`), `sameSite: 'lax'`, `path: '/'`, `maxAge: 604800` (7 days).
+- [x] **Next.js Server Actions Allowed Origins (`next.config.js`)**:
+  - Configured `experimental.serverActions.allowedOrigins` dynamically supporting `localhost:3000`, `127.0.0.1:3000`, root domain, wildcard subdomains (`*.schoolerp.com`), and `SERVER_ACTIONS_ALLOWED_ORIGINS`.
+- [x] **Verified Suite**: `src/tests/verify-phase-1c.ts` (27/27 tests passed).
+- [x] **Full Regression Matrix**: 16/16 suites passed (0 failed).
+- [x] **Clean Build & Lint**: `tsc --noEmit` (0 errors), `npm run lint` (0 errors), `npm run build` (51/51 routes clean).
+
+**GATE 1C IS COMPLETE.** Ready for Phase 2.
+
