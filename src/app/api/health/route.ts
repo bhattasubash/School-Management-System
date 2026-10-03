@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Liveness Health Probe.
  * Returns 200 OK if the Next.js Node.js process is active.

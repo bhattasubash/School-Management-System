@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { redis } from '@/lib/redis';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Readiness Health Probe.
  * Verifies that critical downstream infrastructure (PostgreSQL database and Redis)
