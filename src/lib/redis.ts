@@ -14,13 +14,11 @@ function createRedisClient(): Redis | null {
         return Math.min(times * 200, 1000);
       },
       lazyConnect: true,
+      enableOfflineQueue: false,
     });
 
-    client.on('error', (err) => {
-      // Graceful error logging to prevent crashes if Redis is offline locally
-      if (process.env.NODE_ENV === 'development') {
-        // Suppress repeated connection logs
-      }
+    client.on('error', () => {
+      // Suppress unhandled error event exceptions when Redis is offline
     });
 
     return client;
@@ -33,4 +31,17 @@ export const redis = globalForRedis.redis ?? createRedisClient();
 
 if (process.env.NODE_ENV !== 'production' && redis) {
   globalForRedis.redis = redis;
+}
+
+/**
+ * Checks whether Redis is online and responding to PING.
+ */
+export async function isRedisAvailable(): Promise<boolean> {
+  if (!redis) return false;
+  try {
+    const res = await redis.ping();
+    return res === 'PONG';
+  } catch {
+    return false;
+  }
 }

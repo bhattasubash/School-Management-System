@@ -598,7 +598,13 @@ async function runComprehensiveMatrixVerification() {
     assert(migrationDirs.length >= 2, `Migration History: Found ${migrationDirs.length} migration folders in prisma/migrations`);
 
     // 7.3 Programmatic migrate status
-    const statusOutput = execSync('npx prisma migrate status', { encoding: 'utf8' });
+    if (!process.env.DIRECT_URL && process.env.DATABASE_URL) {
+      process.env.DIRECT_URL = process.env.DATABASE_URL;
+    }
+    const statusOutput = execSync('npx prisma migrate status', {
+      encoding: 'utf8',
+      env: process.env,
+    });
     assert(
       statusOutput.includes('Database schema is up to date'),
       'Migration Status: Database schema is completely up to date with zero unapplied migrations'

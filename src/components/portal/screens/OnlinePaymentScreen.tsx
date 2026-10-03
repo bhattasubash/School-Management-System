@@ -442,7 +442,7 @@ export default function OnlinePaymentScreen({
               <div>
                 <h3 className="text-base font-bold text-slate-900">Select Invoice or Fee Head</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Dynamic amount calculated from student's verified academic assessment and billing records.
+                  Dynamic amount calculated from student&apos;s verified academic assessment and billing records.
                 </p>
               </div>
 

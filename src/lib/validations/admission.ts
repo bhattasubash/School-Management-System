@@ -11,7 +11,10 @@ export const CreateAdmissionApplicationSchema = z
     bloodGroup: z.string().optional(),
     aadhaarNumber: z
       .string()
-      .regex(/^\d{12}$/, 'Aadhaar must be a 12-digit number')
+      .regex(
+        /^(\d{12}|[Xx\d]{4}-[Xx\d]{4}-\d{4})$/,
+        'Aadhaar must be a 12-digit number or masked format (e.g. XXXX-XXXX-1234)'
+      )
       .optional()
       .or(z.literal('')),
     parentName: z.string().min(2, 'Parent name must be at least 2 characters'),

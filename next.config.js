@@ -1,4 +1,32 @@
 /** @type {import('next').NextConfig} */
+
+// Compute allowed origins for Next.js 14 Server Actions
+const rawAppDomain = (process.env.NEXT_PUBLIC_APP_DOMAIN || 'localhost:3000').trim();
+const cleanAppDomain = rawAppDomain.replace(/^https?:\/\//, '').split('/')[0];
+const baseDomain = cleanAppDomain.split(':')[0];
+
+const defaultAllowedOrigins = [
+  'localhost:3000',
+  '127.0.0.1:3000',
+  cleanAppDomain,
+];
+
+// Add wildcard domain for multi-tenant subdomains (e.g. *.schoolerp.com)
+if (baseDomain && baseDomain !== 'localhost' && baseDomain !== '127.0.0.1') {
+  defaultAllowedOrigins.push(`*.${baseDomain}`);
+}
+
+// Add extra origins from environment (comma-separated list for custom domains or staging)
+const extraAllowedOrigins = process.env.SERVER_ACTIONS_ALLOWED_ORIGINS
+  ? process.env.SERVER_ACTIONS_ALLOWED_ORIGINS.split(',')
+      .map((s) => s.trim().replace(/^https?:\/\//, '').split('/')[0])
+      .filter(Boolean)
+  : [];
+
+const serverActionsAllowedOrigins = Array.from(
+  new Set([...defaultAllowedOrigins, ...extraAllowedOrigins])
+);
+
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
@@ -8,6 +36,9 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
+    serverActions: {
+      allowedOrigins: serverActionsAllowedOrigins,
+    },
     serverComponentsExternalPackages: [
       'bcryptjs',
       '@prisma/client',

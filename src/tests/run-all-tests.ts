@@ -11,6 +11,9 @@ loadEnvConfig(process.cwd());
 if (process.env.DATABASE_URL_TEST && (!process.env.DATABASE_URL || !process.env.DATABASE_URL.includes('_test'))) {
   process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
 }
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('_test')) {
+  process.env.DIRECT_URL = process.env.DATABASE_URL;
+}
 
 const dbUrl = process.env.DATABASE_URL || '';
 let dbName = '';
@@ -46,6 +49,7 @@ const testSuites = [
   'src/tests/verify-superadmin.ts',
   'src/tests/verify-phase-1a.ts',
   'src/tests/verify-phase-1b.ts',
+  'src/tests/verify-phase-1c.ts',
   'src/tests/verify-phase-9.ts',
   'src/tests/verify-security-hardening.ts',
   'src/tests/verify-comprehensive-matrix.ts',

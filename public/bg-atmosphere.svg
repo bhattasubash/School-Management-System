@@ -1,0 +1,42 @@
+<svg width="1536" height="1024" viewBox="0 0 1536 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#CBE9FE" />
+      <stop offset="50%" stop-color="#DAF0FF" />
+      <stop offset="100%" stop-color="#D0EDFE" />
+    </linearGradient>
+    <linearGradient id="wave1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BEE2FD" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#E1F3FE" stop-opacity="0.1" />
+    </linearGradient>
+    <linearGradient id="wave2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#C5E6FD" stop-opacity="0.2" />
+    </linearGradient>
+    <linearGradient id="wave3" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#B9DFFE" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.2" />
+    </linearGradient>
+  </defs>
+
+  <!-- Base atmospheric background -->
+  <rect width="1536" height="1024" fill="url(#bgGrad)" />
+
+  <!-- Top-right organic waves & rays -->
+  <path d="M950 0 C1100 80 1280 120 1536 60 L1536 0 Z" fill="url(#wave1)" />
+  <path d="M1100 0 C1250 140 1380 200 1536 280 L1536 0 Z" fill="url(#wave2)" />
+  <path d="M1250 0 C1350 220 1420 340 1536 450 L1536 0 Z" fill="url(#wave1)" opacity="0.5" />
+  
+  <!-- Subtle diagonal atmospheric bands in upper right -->
+  <path d="M980 0 L1536 550 L1536 380 L1150 0 Z" fill="#FFFFFF" opacity="0.18" />
+  <path d="M1200 0 L1536 330 L1536 220 L1320 0 Z" fill="#FFFFFF" opacity="0.25" />
+
+  <!-- Bottom-right atmospheric curve -->
+  <path d="M1100 1024 C1280 920 1420 880 1536 820 L1536 1024 Z" fill="url(#wave3)" />
+  <path d="M1300 1024 C1400 950 1480 920 1536 900 L1536 1024 Z" fill="url(#wave2)" />
+
+  <!-- Left & bottom-left organic curves -->
+  <path d="M0 250 C120 300 180 420 100 580 C40 680 0 740 0 800 Z" fill="url(#wave1)" opacity="0.5" />
+  <path d="M0 820 C180 840 320 900 450 1024 L0 1024 Z" fill="url(#wave3)" />
+  <path d="M0 650 C80 720 120 840 80 1024 L0 1024 Z" fill="url(#wave2)" opacity="0.6" />
+</svg>

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { processAadhaarForStorage } from '@/lib/aadhaar';
 import bcrypt from 'bcryptjs';
 import {
   CreateAdmissionApplicationSchema,
@@ -74,7 +75,7 @@ export async function submitAdmissionApplication(
       dateOfBirth: new Date(input.dateOfBirth),
       gender: input.gender,
       bloodGroup: input.bloodGroup || null,
-      aadhaarNumber: input.aadhaarNumber || null,
+      aadhaarNumber: processAadhaarForStorage(input.aadhaarNumber),
       parentName: input.parentName,
       parentPhone: input.parentPhone,
       parentEmail: input.parentEmail || null,

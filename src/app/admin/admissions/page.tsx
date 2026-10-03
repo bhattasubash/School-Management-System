@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { sanitizeAadhaarForDisplay } from '@/lib/aadhaar';
 import { getSessionFromCookies } from '@/lib/session';
 import AdmissionsIntakeClient, {
   AdmissionApplicationItem,
@@ -75,7 +76,7 @@ export default async function AdminAdmissionsPage() {
     dateOfBirth: app.dateOfBirth.toISOString(),
     gender: app.gender,
     bloodGroup: app.bloodGroup,
-    aadhaarNumber: app.aadhaarNumber,
+    aadhaarNumber: sanitizeAadhaarForDisplay(app.aadhaarNumber),
     parentName: app.parentName,
     parentPhone: app.parentPhone,
     parentEmail: app.parentEmail,

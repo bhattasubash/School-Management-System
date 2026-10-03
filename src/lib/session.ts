@@ -13,18 +13,42 @@ export { createSessionToken, verifySessionToken, getJwtSecretKey };
 export const SESSION_COOKIE_NAME = 'session_token';
 export const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
+export interface CookieSecurityOptions {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'lax' | 'strict' | 'none';
+  path: string;
+  maxAge: number;
+}
+
 /**
- * Sets the session cookie in HTTP-only mode.
+ * Returns security-hardened cookie configuration:
+ * - httpOnly: true (prevents XSS access)
+ * - secure: true in production or when COOKIE_SECURE is set
+ * - sameSite: 'lax' (defends against CSRF while permitting valid top-level links)
+ * - path: '/'
+ */
+export function getSessionCookieOptions(maxAge: number = SESSION_MAX_AGE): CookieSecurityOptions {
+  const isSecure =
+    process.env.NODE_ENV === 'production' ||
+    process.env.COOKIE_SECURE === 'true' ||
+    process.env.NEXT_PUBLIC_APP_URL?.startsWith('https://') === true;
+
+  return {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: 'lax',
+    path: '/',
+    maxAge,
+  };
+}
+
+/**
+ * Sets the session cookie in HTTP-only mode with secure flags.
  */
 export async function setSessionCookie(token: string): Promise<void> {
   const cookieStore = cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_MAX_AGE,
-  });
+  cookieStore.set(SESSION_COOKIE_NAME, token, getSessionCookieOptions(SESSION_MAX_AGE));
 }
 
 /**
@@ -32,13 +56,7 @@ export async function setSessionCookie(token: string): Promise<void> {
  */
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 0,
-  });
+  cookieStore.set(SESSION_COOKIE_NAME, '', getSessionCookieOptions(0));
 }
 
 let testSessionOverride: JWTPayload | null = null;

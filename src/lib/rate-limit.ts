@@ -9,12 +9,18 @@ export interface RateLimitConfig {
   maxRequests: number;
   /** Window duration in seconds */
   windowSeconds: number;
+  /**
+   * Whether to fail closed (block requests) if Redis is unavailable.
+   * Defaults to true in production for login endpoints or when REDIS_FAIL_CLOSED=true.
+   */
+  failClosed?: boolean;
 }
 
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
   retryAfterSeconds: number;
+  error?: string;
 }
 
 // Fallback in-memory store if Redis is unavailable
@@ -41,12 +47,26 @@ function cleanupMemoryStore() {
 }
 
 /**
+ * Reset memory rate limiter (for test teardown and verification).
+ */
+export function resetMemoryRateLimiter(): void {
+  memoryStore.clear();
+}
+
+/**
  * Checks and increments rate limit counter atomically.
- * Uses Redis atomic INCR + EXPIRE if Redis is reachable, with automatic in-memory fallback.
+ * Uses Redis atomic INCR + EXPIRE if Redis is reachable.
+ * If Redis is offline:
+ * - Fails closed (denies request) if failClosed is enabled or in production for login.
+ * - Otherwise falls back to in-memory store for local development and non-critical limits.
  */
 export async function rateLimit(config: RateLimitConfig): Promise<RateLimitResult> {
   const fullKey = `${config.prefix}:${config.key}`;
   const now = Date.now();
+  const shouldFailClosed =
+    config.failClosed ??
+    (process.env.REDIS_FAIL_CLOSED === 'true' ||
+      (process.env.NODE_ENV === 'production' && config.prefix === 'rl:login'));
 
   // Try Redis first
   if (redis) {
@@ -73,9 +93,32 @@ export async function rateLimit(config: RateLimitConfig): Promise<RateLimitResul
           return { allowed, remaining, retryAfterSeconds };
         }
       }
+
+      if (shouldFailClosed) {
+        return {
+          allowed: false,
+          remaining: 0,
+          retryAfterSeconds: config.windowSeconds,
+          error: 'Rate limiter unavailable (fail-closed)',
+        };
+      }
     } catch {
-      // Redis operation failed; fall through to memory store safely
+      if (shouldFailClosed) {
+        return {
+          allowed: false,
+          remaining: 0,
+          retryAfterSeconds: config.windowSeconds,
+          error: 'Rate limiter unavailable (fail-closed)',
+        };
+      }
     }
+  } else if (shouldFailClosed) {
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterSeconds: config.windowSeconds,
+      error: 'Rate limiter unavailable (fail-closed)',
+    };
   }
 
   // In-memory fallback
